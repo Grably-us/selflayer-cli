@@ -1,7 +1,7 @@
 """
-Pydantic models for SLBrowser application.
+Pydantic models for SelfLayer application.
 
-This module defines the core data models used throughout the SLBrowser application,
+This module defines the core data models used throughout the SelfLayer application,
 including WebCard for analyzed content, SearchResult for search data,
 and AppState for managing application state.
 """

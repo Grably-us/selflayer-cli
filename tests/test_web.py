@@ -1,40 +1,41 @@
-"""Unit tests for SLBrowser web module."""
+"""Unit tests for SelfLayer web module."""
 
 from unittest.mock import MagicMock, patch
 
 import httpx
 import pytest
 
-from slbrowser import NetworkError
-from slbrowser.web import WebScraper
+from selflayer import WebError
+from selflayer.web import WebClient
 
 
-class TestWebScraper:
-    """Test cases for WebScraper class."""
+class TestWebClient:
+    """Test cases for WebClient class."""
 
-    def test_web_scraper_initialization(self):
-        """Test WebScraper initialization."""
-        scraper = WebScraper()
-        assert scraper.timeout == 30.0
-        assert scraper.max_retries == 3
-        assert scraper.user_agent is not None
+    def test_web_client_initialization(self):
+        """Test WebClient initialization."""
+        client = WebClient()
+        assert client.timeout == 30.0
+        assert client.max_retries == 3
+        assert client.user_agent is not None
 
-    def test_web_scraper_custom_config(self):
-        """Test WebScraper with custom configuration."""
-        scraper = WebScraper(timeout=60.0, max_retries=5, user_agent="Custom Agent")
-        assert scraper.timeout == 60.0
-        assert scraper.max_retries == 5
-        assert scraper.user_agent == "Custom Agent"
+    def test_web_client_custom_config(self):
+        """Test WebClient with custom configuration."""
+        client = WebClient(timeout=60.0, max_retries=5, user_agent="Custom Agent")
+        assert client.timeout == 60.0
+        assert client.max_retries == 5
+        assert client.user_agent == "Custom Agent"
 
     @pytest.mark.asyncio
     async def test_fetch_content_success(self, sample_html_content):
         """Test successful content fetching."""
-        scraper = WebScraper()
+        client = WebClient()
 
         with patch("httpx.AsyncClient") as mock_client:
             mock_response = MagicMock()
             mock_response.status_code = 200
             mock_response.text = sample_html_content
+            mock_response.content = sample_html_content.encode()
             mock_response.headers = {"content-type": "text/html"}
             mock_response.raise_for_status.return_value = None
 
@@ -42,7 +43,7 @@ class TestWebScraper:
                 mock_response
             )
 
-            content = await scraper.fetch_content("https://example.com")
+            content = await client.fetch_content("https://example.com")
 
             assert content is not None
             assert "Test Article Title" in content
@@ -51,7 +52,7 @@ class TestWebScraper:
     @pytest.mark.asyncio
     async def test_fetch_content_404_error(self):
         """Test handling of 404 errors."""
-        scraper = WebScraper()
+        client = WebClient()
 
         with patch("httpx.AsyncClient") as mock_client:
             mock_response = MagicMock()
@@ -64,138 +65,45 @@ class TestWebScraper:
                 mock_response
             )
 
-            with pytest.raises(NetworkError):
-                await scraper.fetch_content("https://example.com/nonexistent")
+            with pytest.raises(WebError):
+                await client.fetch_content("https://example.com/nonexistent")
 
     @pytest.mark.asyncio
     async def test_fetch_content_timeout(self):
         """Test handling of timeout errors."""
-        scraper = WebScraper()
+        client = WebClient()
 
         with patch("httpx.AsyncClient") as mock_client:
             mock_client.return_value.__aenter__.return_value.get.side_effect = (
                 httpx.TimeoutException("Timeout")
             )
 
-            with pytest.raises(NetworkError):
-                await scraper.fetch_content("https://slow-site.com")
+            with pytest.raises(WebError):
+                await client.fetch_content("https://slow-site.com")
 
     @pytest.mark.asyncio
     async def test_fetch_content_connection_error(self):
         """Test handling of connection errors."""
-        scraper = WebScraper()
+        client = WebClient()
 
         with patch("httpx.AsyncClient") as mock_client:
             mock_client.return_value.__aenter__.return_value.get.side_effect = (
                 httpx.ConnectError("Connection failed")
             )
 
-            with pytest.raises(NetworkError):
-                await scraper.fetch_content("https://unreachable.com")
-
-    def test_extract_text_from_html(self, sample_html_content):
-        """Test HTML text extraction."""
-        scraper = WebScraper()
-        text = scraper.extract_text(sample_html_content)
-
-        assert "Test Article Title" in text
-        assert "first paragraph" in text
-        assert "second paragraph" in text
-        assert "First list item" in text
-        # HTML tags should be removed
-        assert "<h1>" not in text
-        assert "<p>" not in text
-
-    def test_extract_text_from_plain_text(self):
-        """Test extraction from plain text (no HTML)."""
-        scraper = WebScraper()
-        plain_text = "This is just plain text without any HTML tags."
-
-        result = scraper.extract_text(plain_text)
-        assert result == plain_text
-
-    def test_extract_text_empty_content(self):
-        """Test extraction from empty content."""
-        scraper = WebScraper()
-
-        assert scraper.extract_text("") == ""
-        assert scraper.extract_text(None) == ""
-
-    def test_extract_text_malformed_html(self):
-        """Test extraction from malformed HTML."""
-        scraper = WebScraper()
-        malformed_html = "<div><p>Unclosed paragraph<span>Unclosed span</div>"
-
-        # Should still extract text even with malformed HTML
-        result = scraper.extract_text(malformed_html)
-        assert "Unclosed paragraph" in result
-        assert "Unclosed span" in result
-
-    def test_extract_links_from_html(self, sample_html_content):
-        """Test link extraction from HTML."""
-        scraper = WebScraper()
-        links = scraper.extract_links(sample_html_content, "https://example.com")
-
-        assert len(links) > 0
-        assert any("https://example.com" in link for link in links)
-
-    def test_extract_links_relative_urls(self):
-        """Test extraction and resolution of relative URLs."""
-        scraper = WebScraper()
-        html_with_relative = """
-        <html>
-            <body>
-                <a href="/relative/path">Relative link</a>
-                <a href="../parent/path">Parent relative</a>
-                <a href="same-level.html">Same level</a>
-            </body>
-        </html>
-        """
-
-        links = scraper.extract_links(
-            html_with_relative, "https://example.com/current/page"
-        )
-
-        # Should resolve relative URLs to absolute
-        absolute_links = [link for link in links if link.startswith("http")]
-        assert len(absolute_links) > 0
-
-    def test_extract_dates_from_html(self, sample_html_content):
-        """Test date extraction from HTML."""
-        scraper = WebScraper()
-        dates = scraper.extract_dates(sample_html_content)
-
-        assert len(dates) > 0
-        assert "2024-01-15" in dates
-
-    def test_extract_dates_various_formats(self):
-        """Test extraction of dates in various formats."""
-        scraper = WebScraper()
-        html_with_dates = """
-        <html>
-            <body>
-                <time datetime="2024-01-15">January 15, 2024</time>
-                <span>Published on 2024/01/15</span>
-                <div>Date: 15-01-2024</div>
-                <p>Updated: Jan 15, 2024</p>
-            </body>
-        </html>
-        """
-
-        dates = scraper.extract_dates(html_with_dates)
-
-        # Should find multiple date formats
-        assert len(dates) > 0
+            with pytest.raises(WebError):
+                await client.fetch_content("https://unreachable.com")
 
     @pytest.mark.asyncio
-    async def test_scrape_url_full_workflow(self, sample_html_content):
-        """Test complete URL scraping workflow."""
-        scraper = WebScraper()
+    async def test_extract_content_success(self, sample_html_content):
+        """Test successful content extraction."""
+        client = WebClient()
 
         with patch("httpx.AsyncClient") as mock_client:
             mock_response = MagicMock()
             mock_response.status_code = 200
             mock_response.text = sample_html_content
+            mock_response.content = sample_html_content.encode()
             mock_response.headers = {"content-type": "text/html"}
             mock_response.raise_for_status.return_value = None
 
@@ -203,44 +111,140 @@ class TestWebScraper:
                 mock_response
             )
 
-            result = await scraper.scrape_url("https://example.com/test")
+            result = await client.extract_content("https://example.com")
 
             assert result is not None
+            assert "title" in result
             assert "content" in result
             assert "links" in result
-            assert "dates" in result
-            assert len(result["content"]) > 0
+            assert "meta_description" in result
+            assert "word_count" in result
+            assert "content_length" in result
 
-    def test_clean_text(self):
-        """Test text cleaning functionality."""
-        scraper = WebScraper()
+            assert (
+                "Test Article Title" in result["title"]
+                or "Test Article Title" in result["content"]
+            )
+            assert result["word_count"] > 0
+            assert result["content_length"] > 0
 
-        messy_text = (
-            "  This   has    too   much    whitespace   \n\n\n  and newlines  \t\t  "
-        )
-        cleaned = scraper.clean_text(messy_text)
+    @pytest.mark.asyncio
+    async def test_extract_content_with_context_manager(self, sample_html_content):
+        """Test content extraction using async context manager."""
+        with patch("httpx.AsyncClient") as mock_client:
+            mock_response = MagicMock()
+            mock_response.status_code = 200
+            mock_response.text = sample_html_content
+            mock_response.content = sample_html_content.encode()
+            mock_response.headers = {"content-type": "text/html"}
+            mock_response.raise_for_status.return_value = None
 
-        assert cleaned == "This has too much whitespace and newlines"
+            mock_client.return_value.__aenter__.return_value.get.return_value = (
+                mock_response
+            )
 
-    def test_clean_text_preserve_structure(self):
-        """Test that text cleaning preserves some structure."""
-        scraper = WebScraper()
+            async with WebClient() as client:
+                result = await client.extract_content("https://example.com")
+                assert result is not None
+                assert "title" in result
 
-        structured_text = "Paragraph 1.\n\nParagraph 2.\n\nParagraph 3."
-        cleaned = scraper.clean_text(structured_text)
+    def test_extract_title_from_various_sources(self):
+        """Test title extraction from various HTML sources."""
+        client = WebClient()
 
-        # Should preserve paragraph breaks
-        assert "\n\n" in cleaned or len(cleaned.split(".")) == 3
+        # Mock BeautifulSoup parsing internally by testing the private method
+        from bs4 import BeautifulSoup
 
-    def test_is_valid_url(self):
-        """Test URL validation."""
-        scraper = WebScraper()
+        html = """
+        <html>
+            <head>
+                <title>Page Title</title>
+                <meta property="og:title" content="OG Title">
+                <meta name="twitter:title" content="Twitter Title">
+            </head>
+            <body>
+                <h1>H1 Title</h1>
+            </body>
+        </html>
+        """
 
-        assert scraper.is_valid_url("https://example.com")
-        assert scraper.is_valid_url("http://example.com")
-        assert scraper.is_valid_url("https://example.com/path/to/page")
+        soup = BeautifulSoup(html, "html.parser")
+        title = client._extract_title(soup)
+        assert title == "Page Title"
 
-        assert not scraper.is_valid_url("not-a-url")
-        assert not scraper.is_valid_url("ftp://example.com")  # Only HTTP(S) allowed
-        assert not scraper.is_valid_url("")
-        assert not scraper.is_valid_url(None)
+    def test_extract_meta_description(self):
+        """Test meta description extraction."""
+        client = WebClient()
+
+        from bs4 import BeautifulSoup
+
+        html = """
+        <html>
+            <head>
+                <meta name="description" content="Test description">
+                <meta property="og:description" content="OG description">
+            </head>
+        </html>
+        """
+
+        soup = BeautifulSoup(html, "html.parser")
+        desc = client._extract_meta_description(soup)
+        assert desc == "Test description"
+
+    def test_clean_html_content(self):
+        """Test HTML content cleaning."""
+        client = WebClient()
+
+        from bs4 import BeautifulSoup
+
+        html = """
+        <html>
+            <body>
+                <h1>Title</h1>
+                <p>First paragraph</p>
+                <p>Second paragraph</p>
+                <script>console.log('remove me');</script>
+                <nav>Navigation</nav>
+                <ul>
+                    <li>First list item</li>
+                    <li>Second list item</li>
+                </ul>
+            </body>
+        </html>
+        """
+
+        soup = BeautifulSoup(html, "html.parser")
+        content = client._clean_html_content(soup)
+
+        assert "Title" in content
+        assert "First paragraph" in content
+        assert "Second paragraph" in content
+        assert "First list item" in content
+        assert "console.log" not in content  # Script should be removed
+        assert "Navigation" not in content  # Nav should be removed
+
+    def test_extract_links(self):
+        """Test link extraction and resolution."""
+        client = WebClient()
+
+        from bs4 import BeautifulSoup
+
+        html = """
+        <html>
+            <body>
+                <a href="https://example.com/absolute">Absolute link</a>
+                <a href="/relative/path">Relative link</a>
+                <a href="../parent">Parent relative</a>
+                <a href="#fragment">Fragment link</a>
+                <a href="mailto:test@example.com">Email link</a>
+            </body>
+        </html>
+        """
+
+        soup = BeautifulSoup(html, "html.parser")
+        links = client._extract_links(soup, "https://example.com/current/page")
+
+        # Should include absolute and resolved relative URLs, but not fragments or mailto
+        absolute_links = [link for link in links if link.startswith("http")]
+        assert len(absolute_links) > 0
+        assert any("https://example.com" in link for link in links)

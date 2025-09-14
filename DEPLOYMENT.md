@@ -1,8 +1,8 @@
-# SLBrowser Deployment Guide
+# SelfLayer Deployment Guide
 
 ## Overview
 
-This guide covers the complete deployment process for SLBrowser, including PyPI setup, version management, and automated release workflow.
+This guide covers the complete deployment process for SelfLayer, including PyPI setup, version management, and automated release workflow.
 
 ## Prerequisites
 
@@ -13,7 +13,7 @@ This guide covers the complete deployment process for SLBrowser, including PyPI 
 3. **Enable 2FA**: Highly recommended for security
 4. **Create API Token**: Go to [https://pypi.org/manage/account/token/](https://pypi.org/manage/account/token/)
    - Select "Entire account (all projects)"
-   - Name it something like "SLBrowser-deployment"
+   - Name it something like "SelfLayer-deployment"
    - Copy the token (starts with `pypi-`)
 
 ### 2. Configure PyPI Credentials
@@ -55,7 +55,7 @@ For testing releases, also create a TestPyPI account:
 ## Version Management
 
 The project uses semantic versioning (MAJOR.MINOR.PATCH). Current version is managed in:
-- `slbrowser/__init__.py`
+- `selflayer/__init__.py`
 - `pyproject.toml`
 
 ## Release Commands
@@ -94,13 +94,13 @@ If you prefer to run steps manually:
 
 ### 1. Format Code
 ```bash
-isort slbrowser/
+isort selflayer/
 # Note: black currently has issues with Python 3.12.5, skip for now
 ```
 
 ### 2. Update Version
 ```bash
-# Edit slbrowser/__init__.py and pyproject.toml manually
+# Edit selflayer/__init__.py and pyproject.toml manually
 # Or use the release script for just the version bump:
 python release version 0.1.1  # Just updates version, doesn't deploy
 ```
@@ -117,10 +117,10 @@ python -m build
 ### 4. Test Local Installation
 ```bash
 # Install the wheel locally
-pip install dist/slbrowser-*.whl --force-reinstall
+pip install dist/selflayer-*.whl --force-reinstall
 
 # Test the command
-slbrowser --version
+selflayer --version
 ```
 
 ### 5. Upload to PyPI
@@ -150,7 +150,7 @@ Make sure you have the required environment variables set:
 export GEMINI_API_KEY="your_api_key_here"
 
 # Optional for development
-export SLBROWSER_LOG_LEVEL="INFO"
+export SELFLAYER_LOG_LEVEL="INFO"
 ```
 
 ## Pre-commit Hooks
@@ -194,7 +194,7 @@ git push
    - Try uploading to TestPyPI first
 
 2. **Package Build Fails**
-   - Check for syntax errors: `python -m py_compile slbrowser/*.py`
+   - Check for syntax errors: `python -m py_compile selflayer/*.py`
    - Verify all dependencies are listed in `pyproject.toml`
 
 3. **CLI Commands Don't Work**
@@ -209,13 +209,13 @@ git push
 
 ```bash
 # Check package info
-python -m pip show slbrowser
+python -m pip show selflayer
 
 # List installed entry points
-pip show -f slbrowser | grep -A 10 entry_points
+pip show -f selflayer | grep -A 10 entry_points
 
 # Test import
-python -c "import slbrowser; print(slbrowser.__version__)"
+python -c "import selflayer; print(selflayer.__version__)"
 
 # Validate package metadata
 python -m build --check
@@ -249,18 +249,18 @@ Before releasing:
 1. **Set up your PyPI credentials** using the instructions above
 2. **Test the release process** using `./release patch`
 3. **Create your first release** to PyPI
-4. **Share the package** - it will be installable via `pip install slbrowser`
+4. **Share the package** - it will be installable via `pip install selflayer`
 
 The package is now ready for deployment! Users will be able to install it with:
 
 ```bash
-pip install slbrowser
+pip install selflayer
 ```
 
 And then use it with:
 
 ```bash
-slbrowser --help
-slbrowser analyze https://example.com
-slbrowser search "AI news"
+selflayer --help
+sl analyze https://example.com
+sl search "AI news"
 ```

@@ -1,4 +1,4 @@
-"""Configuration management for SLBrowser.
+"""Configuration management for SelfLayer.
 
 This module handles persistent storage of configuration data like API keys,
 user preferences, and application settings. Data is stored in a secure
@@ -18,13 +18,13 @@ from pydantic import BaseModel, Field
 logger = logging.getLogger(__name__)
 
 # Configuration directory and file paths
-CONFIG_DIR = Path.home() / ".slbrowser"
+CONFIG_DIR = Path.home() / ".selflayer"
 CONFIG_FILE = CONFIG_DIR / "config.json"
 
 
-class SLBrowserConfig(BaseModel):
+class SelfLayerConfig(BaseModel):
     """
-    Configuration model for SLBrowser application.
+    Configuration model for SelfLayer application.
 
     Stores persistent configuration data including API keys and user preferences.
     """
@@ -68,7 +68,7 @@ class SLBrowserConfig(BaseModel):
 
 class ConfigManager:
     """
-    Manages configuration persistence for SLBrowser.
+    Manages configuration persistence for SelfLayer.
 
     Handles loading, saving, and updating configuration data stored in
     the user's home directory. Ensures secure storage with appropriate
@@ -77,7 +77,7 @@ class ConfigManager:
 
     def __init__(self) -> None:
         """Initialize the configuration manager."""
-        self._config: Optional[SLBrowserConfig] = None
+        self._config: Optional[SelfLayerConfig] = None
         self._ensure_config_dir()
 
     def _ensure_config_dir(self) -> None:
@@ -88,12 +88,12 @@ class ConfigManager:
         except Exception as e:
             logger.warning(f"Failed to create config directory: {e}")
 
-    def load_config(self) -> SLBrowserConfig:
+    def load_config(self) -> SelfLayerConfig:
         """
         Load configuration from disk.
 
         Returns:
-            SLBrowserConfig object with loaded configuration or defaults
+            SelfLayerConfig object with loaded configuration or defaults
         """
         if self._config is not None:
             return self._config
@@ -102,18 +102,18 @@ class ConfigManager:
             if CONFIG_FILE.exists():
                 with open(CONFIG_FILE, "r", encoding="utf-8") as f:
                     config_data = json.load(f)
-                self._config = SLBrowserConfig(**config_data)
+                self._config = SelfLayerConfig(**config_data)
                 logger.info("Configuration loaded successfully")
             else:
-                self._config = SLBrowserConfig()
+                self._config = SelfLayerConfig()
                 logger.info("No existing config found, using defaults")
         except Exception as e:
             logger.warning(f"Failed to load config: {e}, using defaults")
-            self._config = SLBrowserConfig()
+            self._config = SelfLayerConfig()
 
         return self._config
 
-    def save_config(self, config: Optional[SLBrowserConfig] = None) -> bool:
+    def save_config(self, config: Optional[SelfLayerConfig] = None) -> bool:
         """
         Save configuration to disk.
 
@@ -150,7 +150,7 @@ class ConfigManager:
             logger.error(f"Failed to save config: {e}")
             return False
 
-    def get_config(self) -> SLBrowserConfig:
+    def get_config(self) -> SelfLayerConfig:
         """Get the current configuration, loading it if necessary."""
         if self._config is None:
             return self.load_config()
@@ -211,7 +211,7 @@ class ConfigManager:
             True if reset and save were successful, False otherwise
         """
         try:
-            self._config = SLBrowserConfig()
+            self._config = SelfLayerConfig()
             return self.save_config()
         except Exception as e:
             logger.error(f"Failed to reset config: {e}")
@@ -230,7 +230,7 @@ def get_config_manager() -> ConfigManager:
     return _config_manager
 
 
-def get_config() -> SLBrowserConfig:
+def get_config() -> SelfLayerConfig:
     """Get the current configuration."""
     return get_config_manager().get_config()
 
@@ -252,7 +252,7 @@ def has_stored_api_key() -> bool:
 
 # Export public interface
 __all__ = [
-    "SLBrowserConfig",
+    "SelfLayerConfig",
     "ConfigManager",
     "get_config_manager",
     "get_config",

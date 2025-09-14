@@ -1,5 +1,5 @@
 """
-Main CLI interface for SLBrowser using Rich for formatting.
+Main CLI interface for SelfLayer using Rich for formatting.
 
 This module implements a pure terminal interface for web search, content analysis,
 and display of results using Rich formatting for an elegant terminal experience.
@@ -29,7 +29,7 @@ from .web import fetch_page_content
 logger = logging.getLogger(__name__)
 
 # API Key text file path
-API_KEY_FILE = Path.home() / ".slbrowser" / "api_key.txt"
+API_KEY_FILE = Path.home() / ".selflayer" / "api_key.txt"
 
 
 def save_api_key_txt(api_key: str) -> bool:
@@ -68,14 +68,14 @@ def clear_api_key_txt() -> bool:
         return False
 
 
-# ASCII Art for SLBrowser
-SLBROWSER_ART = """
-███████╗██╗     ██████╗ ██████╗  ██████╗ ██╗    ██╗███████╗███████╗██████╗
-██╔════╝██║     ██╔══██╗██╔══██╗██╔═══██╗██║    ██║██╔════╝██╔════╝██╔══██╗
-███████╗██║     ██████╔╝██████╔╝██║   ██║██║ █╗ ██║███████╗█████╗  ██████╔╝
-╚════██║██║     ██╔══██╗██╔══██╗██║   ██║██║███╗██║╚════██║██╔══╝  ██╔══██╗
-███████║███████╗██████╔╝██║  ██║╚██████╔╝╚███╔███╔╝███████║███████╗██║  ██║
-╚══════╝╚══════╝╚═════╝ ╚═╝  ╚═╝ ╚═════╝  ╚══╝╚══╝ ╚══════╝╚══════╝╚═╝  ╚═╝
+# ASCII Art for SelfLayer
+SELFLAYER_ART = """
+███████╗███████╗██╗     ███████╗██╗      █████╗ ██╗   ██╗███████╗██████╗
+██╔════╝██╔════╝██║     ██╔════╝██║     ██╔══██╗╚██╗ ██╔╝██╔════╝██╔══██╗
+███████╗█████╗  ██║     █████╗  ██║     ███████║ ╚████╔╝ █████╗  ██████╔╝
+╚════██║██╔══╝  ██║     ██╔══╝  ██║     ██╔══██║  ╚██╔╝  ██╔══╝  ██╔══██╗
+███████║███████╗███████╗██║     ███████╗██║  ██║   ██║   ███████╗██║  ██║
+╚══════╝╚══════╝╚══════╝╚═╝     ╚══════╝╚═╝  ╚═╝   ╚═╝   ╚══════╝╚═╝  ╚═╝
 """
 
 
@@ -100,9 +100,9 @@ def render_welcome(has_api_key: bool = False) -> Panel:
 3. Search only: [bold]/search query[/bold] (or [bold]/s[/bold])"""
         api_status = "[bold red]✗ API Key Required[/bold red]"
 
-    welcome_content = f"""[bold magenta]{SLBROWSER_ART}[/bold magenta]
+    welcome_content = f"""[bold magenta]{SELFLAYER_ART}[/bold magenta]
 
-[bold]Welcome to SLBrowser![/bold]
+[bold]Welcome to SelfLayer![/bold]
 
 An AI-powered terminal web browser for intelligent content analysis and research.
 
@@ -124,7 +124,7 @@ Get your free Gemini API key at: https://makersuite.google.com/app/apikey"""
 
     return Panel(
         welcome_content,
-        title="[bold green]SLBrowser - AI-Powered Terminal Web Browser[/bold green]",
+        title="[bold green]SelfLayer - AI-Powered Terminal Web Browser[/bold green]",
         border_style="green",
         padding=(1, 2),
     )
@@ -233,7 +233,7 @@ def render_webcard(web_card: WebCard) -> Panel:
 
 def render_help() -> Panel:
     """Render the help information."""
-    help_content = """[bold magenta]SLBrowser Commands Reference[/bold magenta]
+    help_content = """[bold magenta]SelfLayer Commands Reference[/bold magenta]
 
 [bold cyan]Setup Commands:[/bold cyan]
 • [bold]/key <api_key>[/bold] (or [bold]/k[/bold])
@@ -264,13 +264,13 @@ def render_help() -> Panel:
 • [bold]/clear[/bold] (or [bold]/c[/bold]) - Clear the screen
 • [bold]/status[/bold] - Show current configuration status
 • [bold]/help[/bold] (or [bold]/h[/bold]) - Show this help message
-• [bold]/quit[/bold] or [bold]/exit[/bold] (or [bold]/q[/bold]) - Exit SelfTUI
+• [bold]/quit[/bold] or [bold]/exit[/bold] (or [bold]/q[/bold]) - Exit SelfLayer
 
 [bold yellow]Tips:[/bold yellow]
 • Get your Gemini API key from: https://makersuite.google.com/app/apikey
 • Use /find for comprehensive analysis of multiple results at once
 • Use /search + /open for step-by-step analysis
-• API key is saved as plain text in ~/.slbrowser/api_key.txt
+• API key is saved as plain text in ~/.selflayer/api_key.txt
 • All operations are performed asynchronously for smooth experience"""
 
     return Panel(
@@ -282,7 +282,7 @@ def render_help() -> Panel:
 
 
 class CLI:
-    """Command-line interface for SLBrowser."""
+    """Command-line interface for SelfLayer."""
 
     def __init__(self) -> None:
         """Initialize the CLI with state and console."""
@@ -337,7 +337,7 @@ class CLI:
             try:
                 # Get user input
                 command_input = await asyncio.to_thread(
-                    Prompt.ask, "[bold cyan]SLBrowser[/bold cyan]", console=self.console
+                    Prompt.ask, "[bold cyan]SelfLayer[/bold cyan]", console=self.console
                 )
 
                 if not command_input.strip():
@@ -870,7 +870,7 @@ class CLI:
             config = config_manager.get_config()
 
             status_info = []
-            status_info.append("[bold blue]SLBrowser Configuration Status[/bold blue]")
+            status_info.append("[bold blue]SelfLayer Configuration Status[/bold blue]")
             status_info.append("")
 
             # API Key status
@@ -922,7 +922,7 @@ class CLI:
 
     async def cmd_quit(self) -> None:
         """Exit the application."""
-        self.console.print("[yellow]👋 Thanks for using SLBrowser![/yellow]")
+        self.console.print("[yellow]👋 Thanks for using SelfLayer![/yellow]")
         self.running = False
 
 
@@ -937,7 +937,7 @@ def main_sync() -> None:
     try:
         asyncio.run(main())
     except KeyboardInterrupt:
-        print("\n👋 Thanks for using SLBrowser!")
+        print("\n👋 Thanks for using SelfLayer!")
     except Exception as e:
         print(f"Error: {e}")
         import sys

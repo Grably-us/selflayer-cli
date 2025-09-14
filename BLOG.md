@@ -1,4 +1,4 @@
-# Introducing SLBrowser: AI-Powered Terminal Web Browsing for the Modern Developer
+# Introducing SelfLayer: AI-Powered Terminal Web Browsing for the Modern Developer
 
 *How I built an intelligent terminal browser that combines web search, AI analysis, and beautiful terminal UI to revolutionize research workflows*
 
@@ -19,16 +19,16 @@ I needed something different—a tool that could:
 - **Maintain focus** by staying in the terminal environment where I do my best work
 - **Process multiple sources** simultaneously for comprehensive research
 
-That's when I decided to build **SLBrowser**: an AI-powered terminal web browser designed specifically for content analysis and research.
+That's when I decided to build **SelfLayer**: an AI-powered terminal web browser designed specifically for content analysis and research.
 
 ## The Vision: Intelligent Terminal Browsing
 
-SLBrowser isn't just another command-line tool—it's a complete rethinking of how we interact with web content for research purposes. Imagine having the power of Google search, the intelligence of modern AI, and the efficiency of terminal interfaces all working together seamlessly.
+SelfLayer isn't just another command-line tool—it's a complete rethinking of how we interact with web content for research purposes. Imagine having the power of Google search, the intelligence of modern AI, and the efficiency of terminal interfaces all working together seamlessly.
 
-Here's what makes SLBrowser special:
+Here's what makes SelfLayer special:
 
 ### 🔍 **Unified Search & Analysis**
-Instead of the traditional "search → click → read → analyze" workflow, SLBrowser introduces the `/find` command that searches and analyzes multiple results automatically:
+Instead of the traditional "search → click → read → analyze" workflow, SelfLayer introduces the `/find` command that searches and analyzes multiple results automatically:
 
 ```bash
 /find quantum computing trends 2024 3
@@ -42,7 +42,7 @@ This single command:
 5. Provides confidence scores for each analysis
 
 ### 🧠 **AI-Powered Content Analysis**
-Using Google Gemini via Pydantic AI, SLBrowser transforms raw web content into structured "WebCards" containing:
+Using Google Gemini via Pydantic AI, SelfLayer transforms raw web content into structured "WebCards" containing:
 - **Executive summaries** (200-500 words)
 - **Key facts** as bullet points
 - **Important dates** extracted from content
@@ -50,7 +50,7 @@ Using Google Gemini via Pydantic AI, SLBrowser transforms raw web content into s
 - **Confidence scores** for analysis reliability
 
 ### 🎨 **Beautiful Terminal Interface**
-Built with Rich, SLBrowser provides a gorgeous terminal experience with:
+Built with Rich, SelfLayer provides a gorgeous terminal experience with:
 - Colorful, responsive layouts
 - Real-time progress indicators
 - ASCII art branding
@@ -58,7 +58,7 @@ Built with Rich, SLBrowser provides a gorgeous terminal experience with:
 
 ## The Technical Architecture
 
-SLBrowser is built on a foundation of modern Python best practices:
+SelfLayer is built on a foundation of modern Python best practices:
 
 ```
 ┌─────────────────┐    ┌─────────────────┐    ┌─────────────────┐
@@ -94,7 +94,7 @@ Every command has a short alias for efficiency:
 - `/key` → `/k`
 
 ### Persistent Configuration
-API keys are saved locally to `~/.slbrowser/api_key.txt`, ensuring seamless usage across sessions without environment variable management.
+API keys are saved locally to `~/.selflayer/api_key.txt`, ensuring seamless usage across sessions without environment variable management.
 
 ### Flexible Analysis Modes
 - **Unified mode**: `/find` for search + analysis in one step
@@ -123,7 +123,7 @@ Stay updated with current events by analyzing multiple news sources and extracti
 
 ## The Development Journey
 
-Building SLBrowser was an exercise in modern Python development:
+Building SelfLayer was an exercise in modern Python development:
 
 1. **Started with Models**: Defined Pydantic models for structured data
 2. **Built the Web Layer**: Created async HTTP client with retry logic
@@ -136,23 +136,23 @@ The entire project follows strict typing, comprehensive testing, and modern pack
 
 ## Installation and Getting Started
 
-Installing SLBrowser is as simple as:
+Installing SelfLayer is as simple as:
 
 ```bash
-pip install slbrowser
+pip install selflayer
 ```
 
 Then get a free Google Gemini API key from [Google AI Studio](https://makersuite.google.com/app/apikey) and you're ready to go:
 
 ```bash
-slb
+sl
 /key YOUR_API_KEY_HERE
 /find artificial intelligence breakthroughs 2024
 ```
 
 ## What's Next?
 
-SLBrowser represents just the beginning of intelligent terminal-based research tools. Future plans include:
+SelfLayer represents just the beginning of intelligent terminal-based research tools. Future plans include:
 
 - **Plugin System**: Custom analyzers for specific domains
 - **Export Features**: Save analyses to various formats
@@ -161,9 +161,9 @@ SLBrowser represents just the beginning of intelligent terminal-based research t
 
 ## Try It Yourself
 
-SLBrowser is open source and available on [GitHub](https://github.com/antonvice/slbrowser) and [PyPI](https://pypi.org/project/slbrowser/).
+SelfLayer is open source and available on [GitHub](https://github.com/antonvice/selflayer) and [PyPI](https://pypi.org/project/selflayer/).
 
-Whether you're a researcher, developer, analyst, or just someone who values efficient information processing, SLBrowser can transform how you interact with web content.
+Whether you're a researcher, developer, analyst, or just someone who values efficient information processing, SelfLayer can transform how you interact with web content.
 
 ---
 

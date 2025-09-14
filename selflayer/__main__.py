@@ -1,8 +1,8 @@
 """
-Main entry point for SLBrowser package.
+Main entry point for SelfLayer package.
 
-This module allows SLBrowser to be run as a Python module using:
-    python -m slbrowser
+This module allows SelfLayer to be run as a Python module using:
+    python -m selflayer
 
 It sets up logging and launches the main CLI application.
 """
@@ -16,7 +16,7 @@ import sys
 # Configure logging for the application
 def setup_logging(level: str = "INFO") -> None:
     """
-    Setup logging configuration for SLBrowser.
+    Setup logging configuration for SelfLayer.
 
     Args:
         level: Logging level (DEBUG, INFO, WARNING, ERROR)
@@ -28,7 +28,7 @@ def setup_logging(level: str = "INFO") -> None:
         format=log_format,
         handlers=[
             # Log to file for debugging
-            logging.FileHandler("slbrowser.log"),
+            logging.FileHandler("selflayer.log"),
             # Also log to stderr for development
             logging.StreamHandler(sys.stderr),
         ],
@@ -40,7 +40,7 @@ def setup_logging(level: str = "INFO") -> None:
 
 
 def main() -> None:
-    """Main entry point for SLBrowser application."""
+    """Main entry point for SelfLayer application."""
     # Setup logging
     setup_logging()
 
@@ -52,7 +52,7 @@ def main() -> None:
 
         asyncio.run(cli_main())
     except KeyboardInterrupt:
-        print("\n👋 Thanks for using SLBrowser!")
+        print("\n👋 Thanks for using SelfLayer!")
         sys.exit(0)
     except Exception as e:
         logging.error(f"Fatal error: {e}")

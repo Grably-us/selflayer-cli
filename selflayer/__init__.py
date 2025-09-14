@@ -1,5 +1,5 @@
 """
-SLBrowser - AI-Powered Terminal Web Browser for Content Analysis and Research.
+SelfLayer - AI-Powered Terminal Web Browser for Content Analysis and Research.
 
 A modern, intelligent terminal-based web browser that combines web scraping,
 AI-powered content analysis, and beautiful terminal formatting to provide
@@ -15,31 +15,31 @@ Key Components:
 
 from __future__ import annotations
 
-__version__ = "0.1.1"
+__version__ = "0.2.0"
 __author__ = "Anton Vice <anton@selflayer.com>"
 __description__ = "AI-powered terminal web browser for content analysis and research"
 
 
 # Core exceptions
-class SLBrowserError(Exception):
-    """Base exception for SLBrowser application."""
+class SelfLayerError(Exception):
+    """Base exception for SelfLayer application."""
 
     pass
 
 
-class APIError(SLBrowserError):
+class APIError(SelfLayerError):
     """Raised when API operations fail."""
 
     pass
 
 
-class WebError(SLBrowserError):
+class WebError(SelfLayerError):
     """Raised when web operations fail."""
 
     pass
 
 
-class SearchError(SLBrowserError):
+class SearchError(SelfLayerError):
     """Raised when search operations fail."""
 
     pass
@@ -50,7 +50,7 @@ __all__ = [
     "__version__",
     "__author__",
     "__description__",
-    "SLBrowserError",
+    "SelfLayerError",
     "APIError",
     "WebError",
     "SearchError",

@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-SLBrowser Release Script
+SelfLayer Release Script
 
 Usage:
     ./release patch    # Increment patch version (0.1.0 -> 0.1.1)
@@ -30,12 +30,12 @@ def run_command(cmd: str, check: bool = True) -> subprocess.CompletedProcess:
 
 def get_current_version() -> str:
     """Get the current version from __init__.py."""
-    init_file = Path("slbrowser/__init__.py")
+    init_file = Path("selflayer/__init__.py")
     content = init_file.read_text()
 
     match = re.search(r'__version__ = ["\']([^"\']+)["\']', content)
     if not match:
-        print("❌ Could not find version in slbrowser/__init__.py")
+        print("❌ Could not find version in selflayer/__init__.py")
         sys.exit(1)
 
     return match.group(1)
@@ -44,7 +44,7 @@ def get_current_version() -> str:
 def set_version(new_version: str) -> None:
     """Set the version in __init__.py and pyproject.toml."""
     # Update __init__.py
-    init_file = Path("slbrowser/__init__.py")
+    init_file = Path("selflayer/__init__.py")
     content = init_file.read_text()
     content = re.sub(
         r'__version__ = ["\']([^"\']+)["\']', f'__version__ = "{new_version}"', content
@@ -90,8 +90,8 @@ def validate_version(version: str) -> bool:
 def format_code() -> None:
     """Format code with black and isort."""
     print("🎨 Formatting code...")
-    run_command("black slbrowser/")
-    run_command("isort slbrowser/")
+    run_command("black selflayer/")
+    run_command("isort selflayer/")
     print("✅ Code formatted")
 
 
@@ -190,7 +190,7 @@ def main():
         print("🧪 Testing package installation...")
         run_command("pip install dist/*.whl --force-reinstall")
         run_command(
-            "python -c 'import slbrowser; print(f\"Installed: {slbrowser.__version__}\")'"
+            "python -c 'import selflayer; print(f\"Installed: {selflayer.__version__}\")'"
         )
 
         # Upload to PyPI

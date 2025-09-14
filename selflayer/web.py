@@ -1,5 +1,5 @@
 """
-Web scraping and content extraction utilities for SLBrowser.
+Web scraping and content extraction utilities for SelfLayer.
 
 This module provides async HTTP client functionality with robust error handling,
 retry logic, and content extraction using BeautifulSoup. Designed for efficient
@@ -61,8 +61,8 @@ class WebClient:
 
         # Default user agent that identifies as a content analyzer
         default_ua = (
-            "SLBrowser/1.0 (AI Terminal Browser; "
-            "+https://github.com/antonvice/slbrowser) httpx"
+            "SelfLayer/1.0 (AI Terminal Browser; "
+            "+https://github.com/antonvice/selflayer) httpx"
         )
         self.user_agent = user_agent or default_ua
 

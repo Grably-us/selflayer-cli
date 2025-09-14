@@ -1,11 +1,11 @@
-"""Test configuration and fixtures for SLBrowser."""
+"""Test configuration and fixtures for SelfLayer."""
 
 import os
 from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 
-from slbrowser.models import SearchResult, WebCard
+from selflayer.models import SearchResult, WebCard
 
 
 @pytest.fixture
@@ -106,4 +106,4 @@ def mock_ai_response():
 def setup_env():
     """Set up environment variables for testing."""
     os.environ.setdefault("GEMINI_API_KEY", "test_key_for_unit_tests")
-    os.environ.setdefault("SLBROWSER_LOG_LEVEL", "DEBUG")
+    os.environ.setdefault("SELFLAYER_LOG_LEVEL", "DEBUG")

@@ -1,4 +1,4 @@
-"""AI integration for SLBrowser using Pydantic AI and Google Gemini.
+"""AI integration for SelfLayer using Pydantic AI and Google Gemini.
 
 This module provides structured AI analysis capabilities with streaming support,
 using Pydantic AI for reliable structured outputs and error handling. Designed
@@ -108,7 +108,7 @@ class ContentAnalyzer:
         Returns:
             System prompt string optimized for web content analysis
         """
-        return """You are an expert content analyzer for SLBrowser, an AI-powered terminal web browser.
+        return """You are an expert content analyzer for SelfLayer, an AI-powered terminal web browser.
 
 Your job is to analyze web content and extract structured information into a WebCard format.
 
@@ -361,7 +361,7 @@ Focus on accuracy, clarity, and usefulness for someone trying to quickly underst
 
 class AIManager:
     """
-    High-level manager for AI operations in SLBrowser.
+    High-level manager for AI operations in SelfLayer.
 
     This class provides a convenient interface for managing multiple AI
     operations and maintaining application-wide AI state.

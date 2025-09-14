@@ -1,12 +1,12 @@
-# SLBrowser 🔍🧠
+# SelfLayer 🔍🧠
 
 **AI-Powered Terminal Web Browser for Content Analysis and Research**
 
-[![PyPI version](https://badge.fury.io/py/slbrowser.svg)](https://badge.fury.io/py/slbrowser)
+[![PyPI version](https://badge.fury.io/py/selflayer.svg)](https://badge.fury.io/py/selflayer)
 [![Python 3.11+](https://img.shields.io/badge/python-3.11+-blue.svg)](https://www.python.org/downloads/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
-SLBrowser is a modern, intelligent terminal-based web browser that combines web scraping, AI-powered content analysis, and beautiful terminal formatting to provide an efficient research and content exploration experience directly from your command line.
+SelfLayer is a modern, intelligent terminal-based web browser that combines web scraping, AI-powered content analysis, and beautiful terminal formatting to provide an efficient research and content exploration experience directly from your command line.
 
 ## ✨ Features
 
@@ -24,7 +24,7 @@ SLBrowser is a modern, intelligent terminal-based web browser that combines web 
 
 ### 🎨 **Beautiful Terminal Interface**
 - **Rich Formatting**: Colorful, responsive terminal UI using Rich library
-- **ASCII Art Branding**: Eye-catching SLBrowser logo
+- **ASCII Art Branding**: Eye-catching SelfLayer logo
 - **Progress Indicators**: Visual feedback for all operations
 - **Error Handling**: Graceful error display and recovery
 
@@ -38,13 +38,13 @@ SLBrowser is a modern, intelligent terminal-based web browser that combines web 
 
 ### From PyPI (Recommended)
 ```bash
-pip install slbrowser
+pip install selflayer
 ```
 
 ### From Source
 ```bash
-git clone https://github.com/antonvice/slbrowser.git
-cd slbrowser
+git clone https://github.com/antonvice/selflayer.git
+cd selflayer
 pip install -e .
 ```
 
@@ -55,34 +55,34 @@ pip install -e .
    - Create a free API key
    - Copy the key for the next step
 
-2. **Configure SLBrowser**
+2. **Configure SelfLayer**
    ```bash
-   slbrowser
+   selflayer
    # On first run, set your API key:
    /key YOUR_API_KEY_HERE
    ```
 
-Your API key will be securely saved to `~/.slbrowser/api_key.txt` for future sessions.
+Your API key will be securely saved to `~/.selflayer/api_key.txt` for future sessions.
 
 ## 📖 Usage
 
-SLBrowser provides two interfaces:
+SelfLayer provides two interfaces:
 
-- **`slbrowser`**: Interactive Terminal User Interface (TUI) with commands like `/find`, `/search`, `/key`
-- **`slb`**: Command Line Interface (CLI) for direct command execution with arguments
+- **`selflayer`**: Interactive Terminal User Interface (TUI) with commands like `/find`, `/search`, `/key`
+- **`sl`**: Command Line Interface (CLI) for direct command execution with arguments
 
-### Launch SLBrowser
+### Launch SelfLayer
 
 **Interactive TUI (Recommended)**
 ```bash
-slbrowser
+selflayer
 ```
 
 **Command Line Interface**
 ```bash
 # For direct command execution
-slb search "your query" --max-results 3
-slb analyze https://example.com
+sl search "your query" --max-results 3
+sl analyze https://example.com
 ```
 
 ### Basic Commands
@@ -152,7 +152,7 @@ slb analyze https://example.com
 | `/key` | `/k` | Set/clear API key |
 | `/clear` | `/c` | Clear screen |
 | `/help` | `/h` | Show help |
-| `/quit` | `/q` | Exit SLBrowser |
+| `/quit` | `/q` | Exit SelfLayer |
 
 ## 🎯 Use Cases
 
@@ -176,7 +176,7 @@ slb analyze https://example.com
 
 ## 🏗️ Architecture
 
-SLBrowser is built with modern Python practices:
+SelfLayer is built with modern Python practices:
 
 - **Pydantic AI**: Structured AI outputs with Google Gemini
 - **Rich**: Beautiful terminal formatting and progress indicators
@@ -186,7 +186,7 @@ SLBrowser is built with modern Python practices:
 
 ### Project Structure
 ```
-slbrowser/
+selflayer/
 ├── __init__.py          # Package initialization and exceptions
 ├── __main__.py          # Entry point and logging setup
 ├── ai.py               # Pydantic AI integration with Gemini
@@ -203,8 +203,8 @@ We welcome contributions! Here's how to get started:
 
 1. **Fork the Repository**
    ```bash
-   git clone https://github.com/antonvice/slbrowser.git
-   cd slbrowser
+   git clone https://github.com/antonvice/selflayer.git
+   cd selflayer
    ```
 
 2. **Set Up Development Environment**
@@ -215,8 +215,8 @@ We welcome contributions! Here's how to get started:
 3. **Run Tests**
    ```bash
    pytest
-   mypy slbrowser/
-   ruff check slbrowser/
+   mypy selflayer/
+   ruff check selflayer/
    ```
 
 4. **Submit Pull Request**
@@ -259,4 +259,4 @@ MIT License - see [LICENSE](LICENSE) file for details.
 
 **Made with ❤️ for researchers, developers, and curious minds everywhere.**
 
-*SLBrowser - Because the web deserves intelligent exploration.*
+*SelfLayer - Because the web deserves intelligent exploration.*

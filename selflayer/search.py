@@ -1,5 +1,5 @@
 """
-Web search functionality for SLBrowser using DuckDuckGo.
+Web search functionality for SelfLayer using DuckDuckGo.
 
 This module provides search capabilities using DuckDuckGo's search engine,
 returning structured results that can be used for further content analysis.

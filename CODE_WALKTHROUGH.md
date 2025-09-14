@@ -1,14 +1,14 @@
-# 🔍 SLBrowser: AI-Powered Terminal Web Browser
+# 🔍 SelfLayer: AI-Powered Terminal Web Browser
 # Basic functionality demo
 
 import asyncio
-from slbrowser.search import search_web
-from slbrowser.web import fetch_page_content
-from slbrowser.ai import get_ai_manager
+from selflayer.search import search_web
+from selflayer.web import fetch_page_content
+from selflayer.ai import get_ai_manager
 
-async def slbrowser_demo():
+async def selflayer_demo():
     """
-    Demonstrates the core SLBrowser workflow:
+    Demonstrates the core SelfLayer workflow:
     1. Search the web with DuckDuckGo
     2. Fetch content from top results
     3. Analyze with AI for structured insights
@@ -57,17 +57,17 @@ async def slbrowser_demo():
 
 # --- Main execution ---
 if __name__ == "__main__":
-    print("SLBrowser Demo: Search + AI Analysis\n")
-    asyncio.run(slbrowser_demo())
+    print("SelfLayer Demo: Search + AI Analysis\n")
+    asyncio.run(selflayer_demo())
 
 # Expected Output:
-# The key takeaway is that SLBrowser combines web search, content fetching,
+# The key takeaway is that SelfLayer combines web search, content fetching,
 # and AI analysis into a single workflow. Each result will be analyzed with
 # structured extraction of facts and confidence scoring.
 
 # Your output will look something like this:
 
-SLBrowser Demo: Search + AI Analysis
+SelfLayer Demo: Search + AI Analysis
 
 Searching for: python async programming 2024
 Found 2 results
@@ -89,8 +89,8 @@ Found 2 results
       2. Async endpoints can handle thousands of concurrent requests
 
 # CLI Usage - Interactive TUI (Terminal User Interface):
-# pip install slbrowser
-# slbrowser                          # Launch interactive TUI
+# pip install selflayer
+# selflayer                          # Launch interactive TUI
 # /key YOUR_GEMINI_API_KEY           # Set API key
 # /find "python async programming" 3  # Search & analyze
 # /search "web scraping"              # Search only
@@ -100,12 +100,12 @@ Found 2 results
 # /quit                              # Exit
 
 # CLI Usage - Direct command line:
-# slb search "machine learning" --max-results 3
-# slb analyze https://docs.python.org/3/tutorial/
+# sl search "machine learning" --max-results 3
+# sl analyze https://docs.python.org/3/tutorial/
 
 # 🖼️ TUI Screenshot:
 # [Space reserved for TUI interface screenshot showing the colorful terminal interface]
 
-# 🚀 SLBrowser: AI-powered terminal web browser
-# 🔗 GitHub: github.com/antonvice/slbrowser
-# 📦 PyPI: pypi.org/project/slbrowser
+# 🚀 SelfLayer: AI-powered terminal web browser
+# 🔗 GitHub: github.com/antonvice/selflayer
+# 📦 PyPI: pypi.org/project/selflayer

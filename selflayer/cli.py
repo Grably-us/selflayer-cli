@@ -1,4 +1,4 @@
-"""Command-line interface for SLBrowser."""
+"""Command-line interface for SelfLayer."""
 
 import argparse
 import asyncio
@@ -142,18 +142,18 @@ async def search_and_analyze(
 def main() -> None:
     """Main CLI entry point."""
     parser = argparse.ArgumentParser(
-        description="SLBrowser - AI-powered terminal web browser",
+        description="SelfLayer - AI-powered terminal web browser",
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""
 Examples:
-  slbrowser analyze https://example.com/article
-  slbrowser search "machine learning trends 2024" --max-results 3
-  slbrowser --version
+  selflayer analyze https://example.com/article
+  selflayer search "machine learning trends 2024" --max-results 3
+  selflayer --version
         """,
     )
 
     parser.add_argument(
-        "--version", action="version", version=f"SLBrowser {__version__}"
+        "--version", action="version", version=f"SelfLayer {__version__}"
     )
     parser.add_argument(
         "--log-level", default="INFO", choices=["DEBUG", "INFO", "WARNING", "ERROR"]
@@ -203,7 +203,7 @@ Examples:
     else:
         # Show welcome message
         welcome_text = Text.assemble(
-            ("SLBrowser ", "bold blue"),
+            ("SelfLayer ", "bold blue"),
             ("v", "dim"),
             (__version__, "bold"),
             (" - AI-powered terminal web browser\n\n", "dim"),
@@ -211,7 +211,7 @@ Examples:
             ("--help", "bold"),
             (" to see available commands", ""),
         )
-        console.print(Panel(welcome_text, title="🌐 Welcome to SLBrowser"))
+        console.print(Panel(welcome_text, title="🌐 Welcome to SelfLayer"))
         parser.print_help()
 
 
