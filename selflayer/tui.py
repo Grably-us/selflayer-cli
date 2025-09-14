@@ -1,8 +1,9 @@
 """
-Main CLI interface for SelfLayer using Rich for formatting.
+Main CLI interface for SelfLayer using Rich for formatting and SelfLayer API.
 
-This module implements a pure terminal interface for web search, content analysis,
-and display of results using Rich formatting for an elegant terminal experience.
+This module implements the completely reworked terminal interface for SelfLayer,
+featuring beautiful Rich formatting, comprehensive API integration, and all the
+new commands for documents, notes, integrations, notifications, and AI assistant.
 """
 
 from __future__ import annotations
@@ -13,62 +14,33 @@ import os
 from pathlib import Path
 
 from rich.console import Console
+from rich.live import Live
 from rich.panel import Panel
 from rich.progress import Progress, SpinnerColumn, TextColumn
-from rich.prompt import Prompt
-from rich.table import Table
+from rich.prompt import Confirm, Prompt
 
-from . import APIError, SearchError, WebError
-from .ai import get_ai_manager
-from .config import load_api_key, save_api_key
-from .models import AppState, SearchResult, WebCard
-from .search import search_web
-from .web import fetch_page_content
+from . import APIError
+from .client import SelfLayerAPIClient, get_api_client
+from .models import AppState, Profile, SearchResult
+from .renderers import (
+    render_ask_response,
+    render_document_card,
+    render_documents_list,
+    render_error_panel,
+    render_integrations_list,
+    render_note_card,
+    render_notes_list,
+    render_notifications_list,
+    render_profile_card,
+    render_search_results,
+    render_streaming_response,
+    render_success_panel,
+)
 
 # Configure module logger
 logger = logging.getLogger(__name__)
 
-# API Key text file path
-API_KEY_FILE = Path.home() / ".selflayer" / "api_key.txt"
-
-
-def save_api_key_txt(api_key: str) -> bool:
-    """Save API key to text file."""
-    try:
-        API_KEY_FILE.parent.mkdir(mode=0o700, exist_ok=True)
-        with open(API_KEY_FILE, "w") as f:
-            f.write(api_key.strip())
-        API_KEY_FILE.chmod(0o600)
-        return True
-    except Exception as e:
-        logger.error(f"Failed to save API key to text file: {e}")
-        return False
-
-
-def load_api_key_txt() -> str | None:
-    """Load API key from text file."""
-    try:
-        if API_KEY_FILE.exists():
-            with open(API_KEY_FILE, "r") as f:
-                return f.read().strip()
-        return None
-    except Exception as e:
-        logger.error(f"Failed to load API key from text file: {e}")
-        return None
-
-
-def clear_api_key_txt() -> bool:
-    """Clear API key text file."""
-    try:
-        if API_KEY_FILE.exists():
-            API_KEY_FILE.unlink()
-        return True
-    except Exception as e:
-        logger.error(f"Failed to clear API key text file: {e}")
-        return False
-
-
-# ASCII Art for SelfLayer
+# SelfLayer ASCII Art
 SELFLAYER_ART = """
 ███████╗███████╗██╗     ███████╗██╗      █████╗ ██╗   ██╗███████╗██████╗
 ██╔════╝██╔════╝██║     ██╔════╝██║     ██╔══██╗╚██╗ ██╔╝██╔════╝██╔══██╗
@@ -84,194 +56,107 @@ def clear_screen() -> None:
     os.system("cls" if os.name == "nt" else "clear")
 
 
-def render_welcome(has_api_key: bool = False) -> Panel:
+def render_welcome(has_api_key: bool = False, profile: Profile | None = None) -> Panel:
     """Render the welcome message with ASCII art and instructions."""
-    # Adjust instructions based on whether API key is available
-    if has_api_key:
-        getting_started = """[bold cyan]You're ready to go![/bold cyan]
-1. Search & analyze: [bold]/find python tutorial[/bold] (or [bold]/f[/bold])
-2. Search only: [bold]/search query[/bold] (or [bold]/s[/bold])
-3. Analyze URL: [bold]/url https://example.com[/bold] (or [bold]/u[/bold])"""
-        api_status = "[bold green]✓ API Key Loaded[/bold green] (from previous session)"
+
+    if has_api_key and profile:
+        greeting = profile.get_greeting()
+        api_status = f"[bold green]✓ Connected as {profile.name}[/bold green]"
+        getting_started = """[bold cyan]Ready to go![/bold cyan]
+• [bold]/ask <question>[/bold] - Ask AI assistant
+• [bold]/search <query>[/bold] - Search your knowledge
+• [bold]/d[/bold] - Documents • [bold]/n[/bold] - Notes • [bold]/i[/bold] - Integrations"""
+    elif has_api_key:
+        greeting = "Welcome to SelfLayer!"
+        api_status = "[bold green]✓ API Key Configured[/bold green]"
+        getting_started = """[bold cyan]Ready to go![/bold cyan]
+• [bold]/ask <question>[/bold] - Ask AI assistant
+• [bold]/search <query>[/bold] - Search your knowledge
+• [bold]/d[/bold] - Documents • [bold]/n[/bold] - Notes • [bold]/i[/bold] - Integrations"""
     else:
-        getting_started = """[bold cyan]Getting Started:[/bold cyan]
-1. Set your Gemini API key: [bold]/key YOUR_API_KEY[/bold] (or [bold]/k[/bold])
-2. Search & analyze: [bold]/find python tutorial[/bold] (or [bold]/f[/bold])
-3. Search only: [bold]/search query[/bold] (or [bold]/s[/bold])"""
+        greeting = "Welcome to SelfLayer!"
         api_status = "[bold red]✗ API Key Required[/bold red]"
+        getting_started = """[bold cyan]Getting Started:[/bold cyan]
+• Set API key: [bold]/key sl_live_your_api_key_here[/bold]
+• Or set environment: [bold]SELFLAYER_API_KEY[/bold]"""
 
     welcome_content = f"""[bold magenta]{SELFLAYER_ART}[/bold magenta]
 
-[bold]Welcome to SelfLayer![/bold]
+[bold]{greeting}[/bold]
 
-An AI-powered terminal web browser for intelligent content analysis and research.
+Your AI-powered knowledge management and research assistant.
 
 {api_status}
 
 {getting_started}
 
-[bold cyan]Available Commands:[/bold cyan]
-• [bold]/key <api_key>[/bold] - Set your Google Gemini API key
-• [bold]/search <query>[/bold] - Search the web using DuckDuckGo
-• [bold]/open <number>[/bold] - Analyze a search result by number
-• [bold]/url <url>[/bold] - Directly analyze a URL
-• [bold]/clear[/bold] - Clear the screen
-• [bold]/help[/bold] - Show detailed help
-• [bold]/quit[/bold] or [bold]/exit[/bold] - Exit the application
-
-[bold yellow]Need an API key?[/bold yellow]
-Get your free Gemini API key at: https://makersuite.google.com/app/apikey"""
+Type [bold cyan]/h[/bold cyan] for help • [bold cyan]/q[/bold cyan] to quit"""
 
     return Panel(
         welcome_content,
-        title="[bold green]SelfLayer - AI-Powered Terminal Web Browser[/bold green]",
+        title="[bold green]SelfLayer TUI v2.0 - AI-Powered Knowledge Management[/bold green]",
         border_style="green",
         padding=(1, 2),
     )
 
 
-def render_search_results(results: list[SearchResult]) -> Panel:
-    """Render search results as a table."""
-    if not results:
-        return Panel(
-            "[yellow]No search results to display[/yellow]",
-            title="Search Results",
-            border_style="yellow",
-        )
-
-    table = Table(
-        title=f"Search Results ({len(results)} found)",
-        show_header=True,
-        header_style="bold magenta",
-        border_style="cyan",
-    )
-    table.add_column("#", style="cyan", width=3)
-    table.add_column("Title", style="bold white", ratio=2)
-    table.add_column("URL", style="blue", ratio=2)
-    table.add_column("Snippet", style="dim", ratio=3)
-
-    for i, result in enumerate(results, 1):
-        table.add_row(
-            str(i),
-            result.title[:60] + "..." if len(result.title) > 60 else result.title,
-            (
-                str(result.url)[:50] + "..."
-                if len(str(result.url)) > 50
-                else str(result.url)
-            ),
-            (
-                result.snippet[:100] + "..."
-                if len(result.snippet) > 100
-                else result.snippet
-            ),
-        )
-
-    return Panel(table, border_style="cyan")
-
-
-def render_webcard(web_card: WebCard) -> Panel:
-    """Render a WebCard with rich formatting."""
-
-    # Facts section (if available)
-    facts_text = ""
-    if web_card.facts:
-        facts_text = "\n".join(f"• {fact}" for fact in web_card.facts)
-
-    # Info section with metadata
-    info_table = Table.grid(padding=1)
-    info_table.add_column(style="bold")
-    info_table.add_column()
-
-    info_table.add_row("URL:", str(web_card.url))
-    info_table.add_row("Analyzed:", web_card.fetched_at.strftime("%Y-%m-%d %H:%M UTC"))
-    info_table.add_row("Confidence:", f"{web_card.analysis_confidence:.1%}")
-    info_table.add_row("Content Length:", f"{web_card.content_length:,} chars")
-
-    if web_card.dates:
-        info_table.add_row("Dates:", ", ".join(web_card.dates[:3]))
-
-    if web_card.links:
-        info_table.add_row("Links Found:", f"{len(web_card.links)} links")
-
-    # Combine sections
-    content_parts = [f"[bold magenta]{web_card.title}[/bold magenta]\n"]
-
-    content_parts.append("[bold cyan]Summary[/bold cyan]")
-    content_parts.append(web_card.large_summary)
-    content_parts.append("")
-
-    if facts_text:
-        content_parts.append("[bold green]Key Facts[/bold green]")
-        content_parts.append(facts_text)
-        content_parts.append("")
-
-    content_parts.append("[bold yellow]Information[/bold yellow]")
-
-    # Format info as text instead of table for simplicity
-    info_lines = [
-        f"[bold]URL:[/bold] {web_card.url}",
-        f"[bold]Analyzed:[/bold] {web_card.fetched_at.strftime('%Y-%m-%d %H:%M UTC')}",
-        f"[bold]Confidence:[/bold] {web_card.analysis_confidence:.1%}",
-        f"[bold]Content Length:[/bold] {web_card.content_length:,} chars",
-    ]
-
-    if web_card.dates:
-        info_lines.append(f"[bold]Dates:[/bold] {', '.join(web_card.dates[:3])}")
-
-    if web_card.links:
-        info_lines.append(f"[bold]Links Found:[/bold] {len(web_card.links)} links")
-
-    content_parts.extend(info_lines)
-
-    return Panel(
-        "\n".join(content_parts),
-        title="[bold]WebCard Analysis[/bold]",
-        border_style="bright_magenta",
-        padding=(1, 2),
-    )
-
-
 def render_help() -> Panel:
-    """Render the help information."""
+    """Render comprehensive help information."""
     help_content = """[bold magenta]SelfLayer Commands Reference[/bold magenta]
 
-[bold cyan]Setup Commands:[/bold cyan]
-• [bold]/key <api_key>[/bold] (or [bold]/k[/bold])
-  Set your Google Gemini API key for AI analysis (saved as text file)
-  Example: /key AIzaSy...
+[bold cyan]🔑 Setup:[/bold cyan]
+• [bold]/key[/bold] (or [bold]/k[/bold]) - Show API key status
+• [bold]/key <api_key>[/bold] - Set SelfLayer API key
+• [bold]/key clear[/bold] - Clear stored API key
+  Example: /key sl_live_your_api_key_here
 
-• [bold]/key clear[/bold] (or [bold]/k clear[/bold])
-  Clear the stored API key from local storage
-
-[bold cyan]Search & Analysis Commands:[/bold cyan]
-• [bold]/find <query> [depth][/bold] (or [bold]/f[/bold])
-  Search the web and automatically analyze multiple results (default: 5)
-  Example: /find python tutorials 3
+[bold cyan]🤖 AI & Search:[/bold cyan]
+• [bold]/ask <question>[/bold] (or [bold]/a[/bold])
+  Ask the AI assistant anything about your knowledge base
+  Example: /ask What are my recent project notes?
 
 • [bold]/search <query>[/bold] (or [bold]/s[/bold])
-  Search the web using DuckDuckGo (no analysis)
-  Example: /search python machine learning tutorials
+  Search across documents, notes, and knowledge graph
+  Example: /search machine learning projects
 
-• [bold]/open <number>[/bold] (or [bold]/o[/bold])
-  Analyze a search result by its number (1, 2, 3, etc.)
-  Example: /open 1
+[bold cyan]📄 Document Management:[/bold cyan]
+• [bold]/documents[/bold] or [bold]/d[/bold] - List all documents
+• [bold]/d new /path/to/file[/bold] - Upload and process document
+• [bold]/d 1[/bold] - View details for document #1
+• [bold]/d delete 1[/bold] - Delete document #1
 
-• [bold]/url <url>[/bold] (or [bold]/u[/bold])
-  Directly analyze content from a specific URL
-  Example: /url https://docs.python.org
+[bold cyan]📝 Notes Management:[/bold cyan]
+• [bold]/notes[/bold] or [bold]/n[/bold] - List all notes
+• [bold]/n new "Title" "Content here"[/bold] - Create new note
+• [bold]/n 1[/bold] - View details for note #1
+• [bold]/n edit 1 "Updated content"[/bold] - Edit note #1
+• [bold]/n delete 1[/bold] - Delete note #1
 
-[bold cyan]Utility Commands:[/bold cyan]
-• [bold]/clear[/bold] (or [bold]/c[/bold]) - Clear the screen
-• [bold]/status[/bold] - Show current configuration status
-• [bold]/help[/bold] (or [bold]/h[/bold]) - Show this help message
-• [bold]/quit[/bold] or [bold]/exit[/bold] (or [bold]/q[/bold]) - Exit SelfLayer
+[bold cyan]🔗 Integrations:[/bold cyan]
+• [bold]/integrations[/bold] or [bold]/i[/bold] - List connections
+• [bold]/i connect gmail[/bold] - Connect Gmail account
+• [bold]/i connect google_calendar[/bold] - Connect Google Calendar
+• [bold]/i connect google_drive[/bold] - Connect Google Drive
+• [bold]/i disconnect 1[/bold] - Disconnect integration #1
+
+[bold cyan]📢 Notifications:[/bold cyan]
+• [bold]/notifications[/bold] or [bold]/notifs[/bold] - View all notifications
+• [bold]/notifs read 1[/bold] - Mark notification #1 as read
+• [bold]/notifs clear[/bold] - Mark all as read
+
+[bold cyan]🔮 Advanced:[/bold cyan]
+• [bold]/rms <email|name|company>[/bold] or [bold]/r[/bold] - Relationship Micro-Summary
+  Get a briefing about a person or company from your knowledge
+  Example: /rms anton96vice@gmail.com or /rms "SelfLayer"
+• [bold]/clear[/bold] or [bold]/c[/bold] - Clear screen
+• [bold]/help[/bold] or [bold]/h[/bold] - Show this help
+• [bold]/quit[/bold] or [bold]/q[/bold] - Exit application
 
 [bold yellow]Tips:[/bold yellow]
-• Get your Gemini API key from: https://makersuite.google.com/app/apikey
-• Use /find for comprehensive analysis of multiple results at once
-• Use /search + /open for step-by-step analysis
-• API key is saved as plain text in ~/.selflayer/api_key.txt
-• All operations are performed asynchronously for smooth experience"""
+• Use numbers to reference items: [cyan]/d 1[/cyan], [cyan]/n edit 2[/cyan]
+• All operations show beautiful progress indicators
+• Streaming responses for AI conversations
+• Rich formatting for all data types"""
 
     return Panel(
         help_content,
@@ -281,51 +166,50 @@ def render_help() -> Panel:
     )
 
 
-class CLI:
-    """Command-line interface for SelfLayer."""
+class SelfLayerCLI:
+    """Command-line interface for SelfLayer with comprehensive API integration."""
 
     def __init__(self) -> None:
         """Initialize the CLI with state and console."""
         self.console = Console()
         self.app_state = AppState()
-        self.ai_manager = get_ai_manager()
+        self.client: SelfLayerAPIClient | None = None
         self.running = True
 
-        # Try to load stored API key and initialize AI if available
-        self._load_stored_config()
+        # Try to initialize API client
+        self._initialize_client()
 
-    def _load_stored_config(self) -> None:
-        """Load stored configuration and initialize AI if API key is available."""
+    def _initialize_client(self) -> None:
+        """Initialize API client and fetch profile if possible."""
         try:
-            # Try to load from text file first, then fall back to JSON config
-            api_key = load_api_key_txt() or load_api_key()
+            from .config import get_effective_api_key
+
+            api_key = get_effective_api_key()
+
             if api_key:
-                # Initialize AI manager with stored key
-                self.ai_manager = get_ai_manager()
-                self.ai_manager.api_key = api_key
-                # Initialize the AI manager so it's ready for use
-                initialization_success = self.ai_manager.initialize()
-                if initialization_success:
-                    self.app_state.api_key_set = True
-                    logger.info(
-                        "Loaded stored API key and initialized AI manager successfully"
-                    )
-                else:
-                    logger.warning(
-                        "API key loaded but AI manager initialization failed"
-                    )
+                self.client = get_api_client()
+                logger.info("API client initialized successfully")
+            else:
+                logger.info("No API key found, client not initialized")
+                self.client = None
+        except APIError as e:
+            logger.warning(f"Failed to initialize API client: {e}")
+            self.client = None
+
+    async def _fetch_profile(self) -> None:
+        """Fetch and cache user profile."""
+        if not self.client:
+            return
+
+        try:
+            profile_data = await self.client.get_profile()
+            self.app_state.set_profile(profile_data)
+            logger.info("Profile loaded successfully")
         except Exception as e:
-            logger.warning(f"Failed to load stored config: {e}")
+            logger.warning(f"Failed to load profile: {e}")
 
     def parse_command(self, raw: str) -> tuple[str, list[str]]:
-        """Parse a raw command input into command and arguments.
-
-        Args:
-            raw: Raw command string from user input
-
-        Returns:
-            Tuple of (command, args_list)
-        """
+        """Parse a raw command input into command and arguments."""
         parts = raw.strip().split()
         if not parts:
             return "", []
@@ -336,8 +220,22 @@ class CLI:
 
     async def run(self) -> None:
         """Run the main command loop."""
+        # Fetch profile if we have a client
+        if self.client:
+            await self._fetch_profile()
+
         clear_screen()
-        self.console.print(render_welcome(self.app_state.api_key_set))
+        self.console.print(
+            render_welcome(
+                has_api_key=bool(self.client), profile=self.app_state.user_profile
+            )
+        )
+
+        # Show profile card if we have profile data
+        if self.app_state.user_profile:
+            self.console.print()
+            self.console.print(render_profile_card(self.app_state.user_profile))
+
         self.console.print()
 
         while self.running:
@@ -355,42 +253,73 @@ class CLI:
                 await self._execute_command(command, args)
 
             except (KeyboardInterrupt, asyncio.CancelledError):
-                self.console.print(
-                    "\n[yellow]Use /quit or /exit to exit gracefully.[/yellow]"
-                )
+                self.console.print("\n[yellow]Use /quit to exit gracefully.[/yellow]")
                 break
             except Exception as e:
                 logger.exception("Unexpected error in command loop")
-                self.console.print(f"[red]Unexpected error: {e}[/red]")
+                self.console.print(render_error_panel(f"Unexpected error: {e}"))
 
     async def _execute_command(self, command: str, args: list[str]) -> None:
-        """Execute a parsed command with arguments.
+        """Execute a parsed command with arguments."""
+        # Check if we have an API client for most commands
+        if (
+            command
+            not in [
+                "/help",
+                "/h",
+                "help",
+                "/key",
+                "/k",
+                "key",
+                "/clear",
+                "/c",
+                "clear",
+                "/quit",
+                "/q",
+                "quit",
+                "exit",
+            ]
+            and not self.client
+        ):
+            self.console.print(
+                render_error_panel(
+                    "SelfLayer API key required. Use /key to set it or set SELFLAYER_API_KEY environment variable.",
+                    "API Error",
+                )
+            )
+            return
 
-        Args:
-            command: The command to execute
-            args: List of command arguments
-        """
-        if command in ["/help", "help", "?", "/?", "/h"]:
+        # Route commands
+        if command in ["/help", "help", "/h"]:
             await self.cmd_help()
         elif command in ["/key", "key", "/k"]:
             await self.cmd_key(args)
+        elif command in ["/ask", "ask", "/a"]:
+            await self.cmd_ask(args)
         elif command in ["/search", "search", "/s"]:
             await self.cmd_search(args)
-        elif command in ["/find", "find", "/f"]:
-            await self.cmd_find(args)
-        elif command in ["/open", "open", "/o"]:
-            await self.cmd_open(args)
-        elif command in ["/url", "url", "/u"]:
-            await self.cmd_url(args)
-        elif command in ["/clear", "clear", "cls", "/c"]:
+        elif command in ["/documents", "documents", "/d"]:
+            await self.cmd_documents(args)
+        elif command in ["/notes", "notes", "/n"]:
+            await self.cmd_notes(args)
+        elif command in ["/integrations", "integrations", "/i"]:
+            await self.cmd_integrations(args)
+        elif command in ["/automations", "automations", "/auto"]:
+            await self.cmd_automations(args)
+        elif command in ["/notifications", "notifications", "/notifs"]:
+            await self.cmd_notifications(args)
+        elif command in ["/rms", "rms", "/r"]:
+            await self.cmd_rms(args)
+        elif command in ["/clear", "clear", "/c"]:
             await self.cmd_clear()
-        elif command in ["/status", "status"]:
-            await self.cmd_status()
         elif command in ["/quit", "/exit", "quit", "exit", "/q"]:
             await self.cmd_quit()
         else:
             self.console.print(
-                f"[red]Unknown command: {command}. Type /help for available commands.[/red]"
+                render_error_panel(
+                    f"Unknown command: {command}. Type /help for available commands.",
+                    "Invalid Command",
+                )
             )
 
     async def cmd_help(self) -> None:
@@ -399,24 +328,77 @@ class CLI:
         self.console.print()
 
     async def cmd_key(self, args: list[str]) -> None:
-        """Set or clear the Gemini API key.
+        """Set or manage the SelfLayer API key."""
+        import os
 
-        Args:
-            args: Command arguments, expecting [api_key] or ["clear"]
-        """
+        from .config import get_config_manager, get_effective_api_key
+
+        config_manager = get_config_manager()
+
         if not args:
-            self.console.print(
-                "[red]Please provide an API key or 'clear': /key YOUR_API_KEY[/red]"
-            )
-            self.console.print("[dim]Use '/key clear' to remove stored API key[/dim]")
+            # Show current key status
+            config = config_manager.get_config()
+            effective_key = get_effective_api_key()
+
+            if effective_key:
+                key_source = (
+                    "environment" if os.getenv("SELFLAYER_API_KEY") else "config"
+                )
+                self.console.print(
+                    Panel(
+                        f"[green]✅ API Key Status: Configured[/green]\n\n"
+                        f"[bold]Source:[/bold] {key_source}\n"
+                        f"[bold]Key:[/bold] {config.get_masked_api_key() if config.api_key else 'Set via environment'}\n\n"
+                        f"Use [cyan]/key clear[/cyan] to remove stored key\n"
+                        f"Use [cyan]/key YOUR_API_KEY[/cyan] to update",
+                        title="[bold green]🔑 API Key Status[/bold green]",
+                        border_style="green",
+                        padding=(1, 2),
+                    )
+                )
+            else:
+                self.console.print(
+                    Panel(
+                        "[red]❌ No API Key Configured[/red]\n\n"
+                        "Set your SelfLayer API key using:\n"
+                        "• [cyan]/key sl_live_your_api_key_here[/cyan]\n"
+                        "• Or set environment variable: [cyan]SELFLAYER_API_KEY[/cyan]\n\n"
+                        "[bold yellow]Get your API key:[/bold yellow]\n"
+                        "Visit your SelfLayer dashboard → API Settings",
+                        title="[bold red]🔑 API Key Required[/bold red]",
+                        border_style="red",
+                        padding=(1, 2),
+                    )
+                )
             return
 
-        # Handle clear command
-        if len(args) == 1 and args[0].lower() == "clear":
-            await self._clear_api_key()
+        if args[0].lower() == "clear":
+            # Clear the stored API key
+            if config_manager.clear_api_key():
+                self.console.print(
+                    render_success_panel(
+                        "API key cleared from local storage.\n\nNote: Environment variable SELFLAYER_API_KEY (if set) will still be used.",
+                        "Key Cleared",
+                    )
+                )
+
+                # Reset client to None since key was cleared
+                if self.client:
+                    await self.client.close()
+                    self.client = None
+                    self.app_state.clear_all_data()
+                    self.app_state.api_key_set = False
+                    self.app_state.user_profile = None
+            else:
+                self.console.print(
+                    render_error_panel(
+                        "Failed to clear API key from storage.", "Clear Error"
+                    )
+                )
             return
 
-        api_key = " ".join(args)  # Join in case key was split
+        # Set new API key
+        api_key = " ".join(args).strip()
 
         with Progress(
             SpinnerColumn(),
@@ -424,90 +406,133 @@ class CLI:
             console=self.console,
             transient=True,
         ) as progress:
-            progress.add_task("Setting up API key...", total=None)
+            progress.add_task("🔑 Setting API key...", total=None)
 
             try:
-                # Initialize AI manager with the new API key
-                self.ai_manager = get_ai_manager()
-                self.ai_manager.api_key = api_key
+                # Save the key to config
+                if config_manager.update_api_key(api_key):
+                    # Initialize new client with the key
+                    from .client import SelfLayerAPIClient
 
-                success = await self.ai_manager.initialize()
+                    if self.client:
+                        await self.client.close()
 
-                if success:
-                    self.app_state.api_key_set = True
+                    self.client = SelfLayerAPIClient(api_key=api_key)
 
-                    # Save API key to both text file and JSON config
-                    txt_saved = save_api_key_txt(api_key)
-                    json_saved = save_api_key(api_key)
+                    # Test the key by fetching profile
+                    try:
+                        profile_data = await self.client.get_profile()
+                        self.app_state.set_profile(profile_data)
 
-                    if txt_saved:
                         self.console.print(
-                            "[green]✓ API key configured and saved successfully![/green]"
-                        )
-                        self.console.print(
-                            "Your API key has been stored locally and will be used in future sessions."
-                        )
-                    elif json_saved:
-                        self.console.print(
-                            "[green]✓ API key configured and saved to config![/green]"
-                        )
-                        self.console.print(
-                            "Your API key has been stored in config and will be used in future sessions."
-                        )
-                    else:
-                        self.console.print(
-                            "[yellow]⚠ API key configured but could not be saved to storage.[/yellow]"
+                            render_success_panel(
+                                f"API key saved and verified successfully!\n\n"
+                                f"Welcome, {profile_data.get('name', 'User')}! 👋\n\n"
+                                f"You can now use all SelfLayer features.",
+                                "Key Configured",
+                            )
                         )
 
-                    self.console.print(
-                        "AI services are now ready. You can start searching with: [cyan]/search your query here[/cyan]"
-                    )
+                        # Show profile card
+                        if self.app_state.user_profile:
+                            self.console.print()
+                            self.console.print(
+                                render_profile_card(self.app_state.user_profile)
+                            )
+
+                    except Exception as e:
+                        self.console.print(
+                            render_error_panel(
+                                f"API key saved but verification failed: {e}\n\n"
+                                f"Please check your API key is valid and has appropriate permissions.",
+                                "Verification Failed",
+                            )
+                        )
+
                 else:
                     self.console.print(
-                        "[red]Failed to initialize AI services. Please check your API key.[/red]"
+                        render_error_panel(
+                            "Failed to save API key to local storage.", "Save Error"
+                        )
                     )
 
-            except APIError as e:
-                self.console.print(f"[red]API Error: {e}[/red]")
+            except ValueError as e:
+                self.console.print(render_error_panel(str(e), "Invalid API Key"))
             except Exception as e:
-                self.console.print(f"[red]Unexpected error: {e}[/red]")
+                self.console.print(
+                    render_error_panel(f"Unexpected error: {e}", "Setup Error")
+                )
 
         self.console.print()
 
-    async def _clear_api_key(self) -> None:
-        """Clear the stored API key."""
-        from .config import get_config_manager
-
-        try:
-            config_manager = get_config_manager()
-
-            # Clear both text file and JSON config
-            txt_cleared = clear_api_key_txt()
-            json_cleared = config_manager.clear_api_key()
-
-            if txt_cleared or json_cleared:
-                self.app_state.api_key_set = False
-                self.ai_manager = get_ai_manager()  # Reset AI manager
-                self.console.print("[green]✓ API key cleared successfully![/green]")
-                self.console.print(
-                    "You will need to set a new API key to use AI features."
+    async def cmd_ask(self, args: list[str]) -> None:
+        """Ask the AI assistant a question with streaming support."""
+        if not args:
+            self.console.print(
+                render_error_panel(
+                    "Please provide a question: /ask What are my recent notes?",
+                    "Missing Query",
                 )
-            else:
-                self.console.print("[red]Failed to clear API key from storage.[/red]")
+            )
+            return
+
+        question = " ".join(args)
+
+        # Use streaming by default for better UX
+        try:
+            accumulated_content = ""
+
+            with Live(
+                render_streaming_response("", False),
+                console=self.console,
+                refresh_per_second=4,
+            ) as live:
+                async for chunk in await self.client.ask(question, stream=True):
+                    if isinstance(chunk, dict):
+                        # Handle different chunk types from streaming
+                        if "data" in chunk and "response" in chunk["data"]:
+                            content = chunk["data"]["response"]
+                            accumulated_content += content
+                            live.update(
+                                render_streaming_response(accumulated_content, False)
+                            )
+                        elif "content" in chunk:
+                            accumulated_content += chunk["content"]
+                            live.update(
+                                render_streaming_response(accumulated_content, False)
+                            )
+
+                # Show final result
+                live.update(render_streaming_response(accumulated_content, True))
+
         except Exception as e:
-            self.console.print(f"[red]Error clearing API key: {e}[/red]")
+            # Fallback to non-streaming if streaming fails
+            logger.warning(f"Streaming failed, falling back to regular ask: {e}")
+
+            with Progress(
+                SpinnerColumn(),
+                TextColumn("[progress.description]{task.description}"),
+                console=self.console,
+                transient=True,
+            ) as progress:
+                progress.add_task(f"🤖 Asking: {question[:50]}...", total=None)
+
+                try:
+                    response = await self.client.ask(question, stream=False)
+                    self.console.print(render_ask_response(response))
+                except Exception as e:
+                    self.console.print(render_error_panel(str(e), "AI Error"))
 
         self.console.print()
 
     async def cmd_search(self, args: list[str]) -> None:
-        """Search the web using DuckDuckGo.
-
-        Args:
-            args: Command arguments, expecting search query terms
-        """
+        """Search the knowledge base."""
         if not args:
             self.console.print(
-                "[red]Please provide a search query: /search your query[/red]"
+                render_error_panel(
+                    "Please provide a search query: /search machine learning",
+                    "Missing Query",
+                )
             )
             return
 
@@ -519,147 +544,620 @@ class CLI:
             console=self.console,
             transient=True,
         ) as progress:
-            progress.add_task(f"Searching for: {query}", total=None)
+            progress.add_task(f"🔍 Searching: {query}", total=None)
 
             try:
-                # Perform search
-                results = await search_web(query, max_results=10)
+                search_data = await self.client.search(query)
+                search_result = SearchResult(**search_data)
 
-                if results:
-                    # Store results in app state
-                    self.app_state.add_search_results(results)
-                    self.app_state.current_search_query = query
+                # Cache results
+                self.app_state.search_results = search_result
+                self.app_state.current_search_query = query
 
-                    # Display results
-                    self.console.print(render_search_results(results))
+                self.console.print(render_search_results(search_result, query))
 
-                    # Instructions for next step
-                    self.console.print(
-                        Panel(
-                            f"[green]Found {len(results)} results![/green]\n\n"
-                            "To analyze a result, use: [cyan]/open <number>[/cyan]\n"
-                            "For example: [bold]/open 1[/bold] to analyze the first result",
-                            title="[blue]Next Steps[/blue]",
-                            border_style="blue",
-                        )
-                    )
-
-                else:
-                    self.console.print(
-                        Panel(
-                            f"[yellow]No results found for query: {query}[/yellow]\n\n"
-                            "Try a different search query or check your internet connection.",
-                            title="[yellow]No Results[/yellow]",
-                            border_style="yellow",
-                        )
-                    )
-
-            except SearchError as e:
-                self.console.print(f"[red]Search error: {e}[/red]")
             except Exception as e:
-                self.console.print(f"[red]Unexpected error during search: {e}[/red]")
+                self.console.print(render_error_panel(str(e), "Search Error"))
 
         self.console.print()
 
-    async def cmd_open(self, args: list[str]) -> None:
-        """Open and analyze a search result by number.
-
-        Args:
-            args: Command arguments, expecting [result_number]
-        """
-        if not self.app_state.search_results:
+    async def cmd_documents(self, args: list[str]) -> None:
+        """Manage documents with subcommands."""
+        if not args:
+            # List all documents
+            await self._list_documents()
+        elif args[0] == "new" and len(args) > 1:
+            # Upload new document
+            await self._upload_document(args[1])
+        elif args[0] == "delete" and len(args) > 1:
+            # Delete document
+            await self._delete_document(args[1])
+        elif args[0].isdigit():
+            # View document details
+            await self._view_document(int(args[0]))
+        else:
             self.console.print(
-                "[red]No search results available. Use /search first.[/red]"
+                render_error_panel(
+                    "Usage: /d, /d new /path/to/file, /d 1, /d delete 1",
+                    "Invalid Arguments",
+                )
+            )
+
+    async def _list_documents(self) -> None:
+        """List all documents."""
+        with Progress(
+            SpinnerColumn(),
+            TextColumn("[progress.description]{task.description}"),
+            console=self.console,
+            transient=True,
+        ) as progress:
+            progress.add_task("📄 Loading documents...", total=None)
+
+            try:
+                documents_data = await self.client.list_documents()
+                self.app_state.update_documents(documents_data)
+                self.console.print(render_documents_list(self.app_state.documents))
+            except Exception as e:
+                self.console.print(render_error_panel(str(e), "Documents Error"))
+
+        self.console.print()
+
+    async def _upload_document(self, file_path: str) -> None:
+        """Upload a document."""
+        file_path_obj = Path(file_path)
+
+        if not file_path_obj.exists():
+            self.console.print(
+                render_error_panel(f"File not found: {file_path}", "File Error")
             )
             return
 
+        if not file_path_obj.is_file():
+            self.console.print(
+                render_error_panel(f"Not a file: {file_path}", "File Error")
+            )
+            return
+
+        with Progress(
+            SpinnerColumn(),
+            TextColumn("[progress.description]{task.description}"),
+            console=self.console,
+            transient=True,
+        ) as progress:
+            progress.add_task(f"📤 Uploading {file_path_obj.name}...", total=None)
+
+            try:
+                await self.client.upload_document(str(file_path_obj))
+                self.console.print(
+                    render_success_panel(
+                        f"Document '{file_path_obj.name}' uploaded successfully and is being processed.",
+                        "Upload Complete",
+                    )
+                )
+
+                # Refresh documents list
+                await self._list_documents()
+
+            except Exception as e:
+                self.console.print(render_error_panel(str(e), "Upload Error"))
+
+    async def _view_document(self, index: int) -> None:
+        """View document details."""
+        document = self.app_state.get_document_by_index(index)
+
+        if not document:
+            self.console.print(
+                render_error_panel(
+                    f"Document #{index} not found. Use /d to list documents.",
+                    "Document Not Found",
+                )
+            )
+            return
+
+        self.console.print(render_document_card(document, index))
+        self.console.print()
+
+    async def _delete_document(self, index_str: str) -> None:
+        """Delete a document."""
+        try:
+            index = int(index_str)
+        except ValueError:
+            self.console.print(
+                render_error_panel(
+                    f"Invalid document number: {index_str}", "Invalid Input"
+                )
+            )
+            return
+
+        document = self.app_state.get_document_by_index(index)
+
+        if not document:
+            self.console.print(
+                render_error_panel(
+                    f"Document #{index} not found. Use /d to list documents.",
+                    "Document Not Found",
+                )
+            )
+            return
+
+        # Confirm deletion
+        if not await asyncio.to_thread(
+            Confirm.ask,
+            f"Delete document '{document.title}'?",
+            console=self.console,
+            default=False,
+        ):
+            self.console.print("[yellow]Deletion cancelled.[/yellow]")
+            return
+
+        with Progress(
+            SpinnerColumn(),
+            TextColumn("[progress.description]{task.description}"),
+            console=self.console,
+            transient=True,
+        ) as progress:
+            progress.add_task(f"🗑️ Deleting {document.title}...", total=None)
+
+            try:
+                await self.client.delete_document(document.id)
+                self.console.print(
+                    render_success_panel(
+                        f"Document '{document.title}' deleted successfully.", "Deleted"
+                    )
+                )
+
+                # Refresh documents list
+                await self._list_documents()
+
+            except Exception as e:
+                self.console.print(render_error_panel(str(e), "Delete Error"))
+
+    async def cmd_notes(self, args: list[str]) -> None:
+        """Manage notes with subcommands."""
         if not args:
-            self.console.print("[red]Please provide a result number: /open 1[/red]")
+            # List all notes
+            await self._list_notes()
+        elif args[0] == "new" and len(args) >= 3:
+            # Create new note: /n new "Title" "Content"
+            await self._create_note(args[1], " ".join(args[2:]))
+        elif args[0] == "edit" and len(args) >= 3:
+            # Edit note: /n edit 1 "New content"
+            await self._edit_note(args[1], " ".join(args[2:]))
+        elif args[0] == "delete" and len(args) > 1:
+            # Delete note: /n delete 1
+            await self._delete_note(args[1])
+        elif args[0].isdigit():
+            # View note details: /n 1
+            await self._view_note(int(args[0]))
+        else:
+            self.console.print(
+                render_error_panel(
+                    'Usage: /n, /n new "Title" "Content", /n 1, /n edit 1 "Content", /n delete 1',
+                    "Invalid Arguments",
+                )
+            )
+
+    async def _list_notes(self) -> None:
+        """List all notes."""
+        with Progress(
+            SpinnerColumn(),
+            TextColumn("[progress.description]{task.description}"),
+            console=self.console,
+            transient=True,
+        ) as progress:
+            progress.add_task("📝 Loading notes...", total=None)
+
+            try:
+                notes_data = await self.client.list_notes()
+                self.app_state.update_notes(notes_data)
+                self.console.print(render_notes_list(self.app_state.notes))
+            except Exception as e:
+                self.console.print(render_error_panel(str(e), "Notes Error"))
+
+        self.console.print()
+
+    async def _create_note(self, title: str, content: str) -> None:
+        """Create a new note."""
+        # Clean quotes from title and content
+        title = title.strip("\"'")
+        content = content.strip("\"'")
+
+        if not title or not content:
+            self.console.print(
+                render_error_panel(
+                    "Both title and content are required", "Invalid Input"
+                )
+            )
+            return
+
+        with Progress(
+            SpinnerColumn(),
+            TextColumn("[progress.description]{task.description}"),
+            console=self.console,
+            transient=True,
+        ) as progress:
+            progress.add_task(f"📝 Creating note '{title[:30]}...'", total=None)
+
+            try:
+                await self.client.create_note(title, content)
+                self.console.print(
+                    render_success_panel(
+                        f"Note '{title}' created successfully.", "Note Created"
+                    )
+                )
+
+                # Refresh notes list
+                await self._list_notes()
+
+            except Exception as e:
+                self.console.print(render_error_panel(str(e), "Create Error"))
+
+    async def _view_note(self, index: int) -> None:
+        """View note details."""
+        note = self.app_state.get_note_by_index(index)
+
+        if not note:
+            self.console.print(
+                render_error_panel(
+                    f"Note #{index} not found. Use /n to list notes.", "Note Not Found"
+                )
+            )
+            return
+
+        self.console.print(render_note_card(note, index))
+        self.console.print()
+
+    async def _edit_note(self, index_str: str, new_content: str) -> None:
+        """Edit a note's content."""
+        try:
+            index = int(index_str)
+        except ValueError:
+            self.console.print(
+                render_error_panel(f"Invalid note number: {index_str}", "Invalid Input")
+            )
+            return
+
+        note = self.app_state.get_note_by_index(index)
+
+        if not note:
+            self.console.print(
+                render_error_panel(
+                    f"Note #{index} not found. Use /n to list notes.", "Note Not Found"
+                )
+            )
+            return
+
+        new_content = new_content.strip("\"'")
+
+        with Progress(
+            SpinnerColumn(),
+            TextColumn("[progress.description]{task.description}"),
+            console=self.console,
+            transient=True,
+        ) as progress:
+            progress.add_task(f"✏️ Updating {note.title}...", total=None)
+
+            try:
+                await self.client.update_note(note.id, content=new_content)
+                self.console.print(
+                    render_success_panel(
+                        f"Note '{note.title}' updated successfully.", "Note Updated"
+                    )
+                )
+
+                # Refresh notes list
+                await self._list_notes()
+
+            except Exception as e:
+                self.console.print(render_error_panel(str(e), "Update Error"))
+
+    async def _delete_note(self, index_str: str) -> None:
+        """Delete a note."""
+        try:
+            index = int(index_str)
+        except ValueError:
+            self.console.print(
+                render_error_panel(f"Invalid note number: {index_str}", "Invalid Input")
+            )
+            return
+
+        note = self.app_state.get_note_by_index(index)
+
+        if not note:
+            self.console.print(
+                render_error_panel(
+                    f"Note #{index} not found. Use /n to list notes.", "Note Not Found"
+                )
+            )
+            return
+
+        # Confirm deletion
+        if not await asyncio.to_thread(
+            Confirm.ask,
+            f"Delete note '{note.title}'?",
+            console=self.console,
+            default=False,
+        ):
+            self.console.print("[yellow]Deletion cancelled.[/yellow]")
+            return
+
+        with Progress(
+            SpinnerColumn(),
+            TextColumn("[progress.description]{task.description}"),
+            console=self.console,
+            transient=True,
+        ) as progress:
+            progress.add_task(f"🗑️ Deleting {note.title}...", total=None)
+
+            try:
+                await self.client.delete_note(note.id)
+                self.console.print(
+                    render_success_panel(
+                        f"Note '{note.title}' deleted successfully.", "Deleted"
+                    )
+                )
+
+                # Refresh notes list
+                await self._list_notes()
+
+            except Exception as e:
+                self.console.print(render_error_panel(str(e), "Delete Error"))
+
+    async def cmd_integrations(self, args: list[str]) -> None:
+        """Manage integrations."""
+        if not args:
+            # List integrations
+            await self._list_integrations()
+        elif args[0] == "connect" and len(args) > 1:
+            # Connect integration
+            await self._connect_integration(args[1])
+        elif args[0] == "disconnect" and len(args) > 1:
+            # Disconnect integration
+            await self._disconnect_integration(args[1])
+        else:
+            self.console.print(
+                render_error_panel(
+                    "Usage: /i, /i connect gmail, /i disconnect 1", "Invalid Arguments"
+                )
+            )
+
+    async def _list_integrations(self) -> None:
+        """List all integrations."""
+        with Progress(
+            SpinnerColumn(),
+            TextColumn("[progress.description]{task.description}"),
+            console=self.console,
+            transient=True,
+        ) as progress:
+            progress.add_task("🔗 Loading integrations...", total=None)
+
+            try:
+                integrations_data = await self.client.list_integrations()
+                self.app_state.update_integrations(integrations_data)
+                self.console.print(
+                    render_integrations_list(self.app_state.integrations)
+                )
+            except Exception as e:
+                self.console.print(render_error_panel(str(e), "Integrations Error"))
+
+        self.console.print()
+
+    async def _connect_integration(self, provider: str) -> None:
+        """Connect a new integration."""
+        with Progress(
+            SpinnerColumn(),
+            TextColumn("[progress.description]{task.description}"),
+            console=self.console,
+            transient=True,
+        ) as progress:
+            progress.add_task(f"🔗 Connecting {provider}...", total=None)
+
+            try:
+                result = await self.client.connect_integration(provider)
+
+                if "redirect_url" in result:
+                    self.console.print(
+                        Panel(
+                            f"🔗 Please visit this URL to authorize {provider}:\n\n"
+                            f"[bold blue]{result['redirect_url']}[/bold blue]\n\n"
+                            "After authorization, the connection will be established automatically.",
+                            title="[bold green]Authorization Required[/bold green]",
+                            border_style="green",
+                            padding=(1, 2),
+                        )
+                    )
+                else:
+                    self.console.print(
+                        render_success_panel(
+                            f"{provider} connected successfully.", "Connected"
+                        )
+                    )
+
+                # Refresh integrations list
+                await self._list_integrations()
+
+            except Exception as e:
+                self.console.print(render_error_panel(str(e), "Connection Error"))
+
+    async def _disconnect_integration(self, index_str: str) -> None:
+        """Disconnect an integration."""
+        try:
+            index = int(index_str)
+        except ValueError:
+            self.console.print(
+                render_error_panel(
+                    f"Invalid integration number: {index_str}", "Invalid Input"
+                )
+            )
+            return
+
+        integration = self.app_state.get_integration_by_index(index)
+
+        if not integration:
+            self.console.print(
+                render_error_panel(
+                    f"Integration #{index} not found. Use /i to list integrations.",
+                    "Integration Not Found",
+                )
+            )
+            return
+
+        # Confirm disconnection
+        if not await asyncio.to_thread(
+            Confirm.ask,
+            f"Disconnect {integration.provider} ({integration.account_identifier})?",
+            console=self.console,
+            default=False,
+        ):
+            self.console.print("[yellow]Disconnection cancelled.[/yellow]")
+            return
+
+        with Progress(
+            SpinnerColumn(),
+            TextColumn("[progress.description]{task.description}"),
+            console=self.console,
+            transient=True,
+        ) as progress:
+            progress.add_task(f"🔌 Disconnecting {integration.provider}...", total=None)
+
+            try:
+                await self.client.disconnect_integration(integration.id)
+                self.console.print(
+                    render_success_panel(
+                        f"{integration.provider} disconnected successfully.",
+                        "Disconnected",
+                    )
+                )
+
+                # Refresh integrations list
+                await self._list_integrations()
+
+            except Exception as e:
+                self.console.print(render_error_panel(str(e), "Disconnect Error"))
+
+    async def cmd_notifications(self, args: list[str]) -> None:
+        """Manage notifications."""
+        if not args:
+            # List notifications
+            await self._list_notifications()
+        elif args[0] == "read" and len(args) > 1:
+            # Mark notification as read
+            await self._mark_notification_read(args[1])
+        elif args[0] == "clear":
+            # Mark all as read
+            await self._mark_all_notifications_read()
+        else:
+            self.console.print(
+                render_error_panel(
+                    "Usage: /notifications, /notifications read 1, /notifications clear",
+                    "Invalid Arguments",
+                )
+            )
+
+    async def _list_notifications(self) -> None:
+        """List all notifications."""
+        with Progress(
+            SpinnerColumn(),
+            TextColumn("[progress.description]{task.description}"),
+            console=self.console,
+            transient=True,
+        ) as progress:
+            progress.add_task("📢 Loading notifications...", total=None)
+
+            try:
+                notifications_data = await self.client.list_notifications()
+                self.app_state.update_notifications(notifications_data)
+                self.console.print(
+                    render_notifications_list(self.app_state.notifications)
+                )
+            except Exception as e:
+                self.console.print(render_error_panel(str(e), "Notifications Error"))
+
+        self.console.print()
+
+    async def _mark_notification_read(self, index_str: str) -> None:
+        """Mark a notification as read."""
+        try:
+            index = int(index_str)
+        except ValueError:
+            self.console.print(
+                render_error_panel(
+                    f"Invalid notification number: {index_str}", "Invalid Input"
+                )
+            )
+            return
+
+        notification = self.app_state.get_notification_by_index(index)
+
+        if not notification:
+            self.console.print(
+                render_error_panel(
+                    f"Notification #{index} not found.", "Notification Not Found"
+                )
+            )
             return
 
         try:
-            number = int(args[0])
-            if number < 1 or number > len(self.app_state.search_results):
-                self.console.print(
-                    f"[red]Invalid result number. Use 1-{len(self.app_state.search_results)}[/red]"
-                )
-                return
-        except ValueError:
-            self.console.print("[red]Please provide a valid number: /open 1[/red]")
-            return
-
-        if not self.ai_manager.is_ready:
+            await self.client.mark_notification_read(notification.id)
             self.console.print(
-                "[red]AI services not ready. Please set your API key first with /key[/red]"
+                render_success_panel("Notification marked as read.", "Updated")
             )
-            return
 
-        # Get the selected result
-        result = self.app_state.search_results[number - 1]
+            # Refresh notifications list
+            await self._list_notifications()
 
-        with Progress(
-            SpinnerColumn(),
-            TextColumn("[progress.description]{task.description}"),
-            console=self.console,
-            transient=True,
-        ) as progress:
-            progress.add_task(f"Fetching content from {result.url}", total=None)
+        except Exception as e:
+            self.console.print(render_error_panel(str(e), "Update Error"))
 
-            try:
-                # Fetch web content
-                content_data = await fetch_page_content(str(result.url))
+    async def _mark_all_notifications_read(self) -> None:
+        """Mark all notifications as read."""
+        try:
+            await self.client.mark_all_notifications_read()
+            self.console.print(
+                render_success_panel("All notifications marked as read.", "All Updated")
+            )
 
-                # Analyzing content with AI...
+            # Refresh notifications list
+            await self._list_notifications()
 
-                # Analyze content with AI
-                ai_response = await self.ai_manager.analyze_web_content(
-                    content_data["content"], str(result.url)
-                )
+        except Exception as e:
+            self.console.print(render_error_panel(str(e), "Update Error"))
 
-                if ai_response.success and ai_response.content:
-                    # Store in app state
-                    self.app_state.add_web_card(ai_response.content)
+    async def cmd_rms(self, args: list[str]) -> None:
+        """Relationship Micro-Summary - get persona briefing for someone."""
+        from .models import PersonaAgentResponse
+        from .renderers import render_persona_briefing
 
-                    # Display WebCard
-                    self.console.print(render_webcard(ai_response.content))
-                    self.console.print(
-                        f"[green]Analysis complete! Confidence: {ai_response.content.analysis_confidence:.1%}[/green]"
-                    )
-                else:
-                    self.console.print(
-                        Panel(
-                            f"[red]Analysis failed: {ai_response.error_message}[/red]",
-                            title="[red]Error[/red]",
-                            border_style="red",
-                        )
-                    )
-
-            except WebError as e:
-                self.console.print(f"[red]Web error: {e}[/red]")
-            except Exception as e:
-                self.console.print(f"[red]Unexpected error: {e}[/red]")
-
-        self.console.print()
-
-    async def cmd_url(self, args: list[str]) -> None:
-        """Directly analyze content from a URL.
-
-        Args:
-            args: Command arguments, expecting [url]
-        """
         if not args:
             self.console.print(
-                "[red]Please provide a URL: /url https://example.com[/red]"
+                render_error_panel(
+                    "Usage: /rms <email|name|company>\n\n"
+                    "Examples:\n"
+                    "  /rms anton96vice@gmail.com\n"
+                    "  /rms Anton Alice Vice\n"
+                    '  /rms "SelfLayer"\n\n'
+                    "Provide at least an email, name, or company to get a relationship summary.",
+                    "RMS Usage",
+                )
             )
+            self.console.print()
             return
 
-        if not self.ai_manager.is_ready:
-            self.console.print(
-                "[red]AI services not ready. Please set your API key first with /key[/red]"
-            )
-            return
+        query = " ".join(args)
 
-        url = args[0]
+        # Try to parse the query - check if it's an email, name, or company
+        email = None
+        name = None
+        company = None
+
+        if "@" in query:
+            email = query
+        elif query.startswith('"') and query.endswith('"'):
+            # Quoted string - treat as company
+            company = query.strip('"')
+        else:
+            # Assume it's a name
+            name = query
 
         with Progress(
             SpinnerColumn(),
@@ -667,275 +1165,42 @@ class CLI:
             console=self.console,
             transient=True,
         ) as progress:
-            progress.add_task(f"Fetching content from {url}", total=None)
+            progress.add_task(
+                f"🤝 Getting RMS{f' for: {query}' if query else '...'}", total=None
+            )
 
             try:
-                # Fetch web content
-                content_data = await fetch_page_content(url)
-
-                # Analyzing content with AI...
-
-                # Analyze content with AI
-                ai_response = await self.ai_manager.analyze_web_content(
-                    content_data["content"], url
+                persona_data = await self.client.get_persona_briefing(
+                    email=email, name=name, company=company
                 )
-
-                if ai_response.success and ai_response.content:
-                    # Store in app state
-                    self.app_state.add_web_card(ai_response.content)
-
-                    # Display WebCard
-                    self.console.print(render_webcard(ai_response.content))
-                    self.console.print(
-                        f"[green]Analysis complete! Confidence: {ai_response.content.analysis_confidence:.1%}[/green]"
-                    )
-                else:
-                    self.console.print(
-                        Panel(
-                            f"[red]Analysis failed: {ai_response.error_message}[/red]",
-                            title="[red]Error[/red]",
-                            border_style="red",
-                        )
-                    )
-
-            except WebError as e:
-                self.console.print(f"[red]Web error: {e}[/red]")
+                persona_response = PersonaAgentResponse(**persona_data)
+                self.console.print(render_persona_briefing(persona_response, query))
             except Exception as e:
-                self.console.print(f"[red]Unexpected error: {e}[/red]")
-
-        self.console.print()
-
-    async def cmd_find(self, args: list[str]) -> None:
-        """Search the web and analyze multiple results automatically.
-
-        Args:
-            args: Command arguments, expecting search query and optional depth
-        """
-        if not args:
-            self.console.print(
-                "[red]Please provide a search query: /find your query[/red]"
-            )
-            self.console.print(
-                "[dim]Optional: /find your query 3 (to limit to 3 results)[/dim]"
-            )
-            return
-
-        if not self.ai_manager.is_ready:
-            self.console.print(
-                "[red]AI services not ready. Please set your API key first with /key[/red]"
-            )
-            return
-
-        # Parse arguments: query and optional depth
-        depth = 5  # Default depth
-        query_parts = args.copy()
-
-        # Check if last argument is a number (depth)
-        if args and args[-1].isdigit():
-            depth = int(args[-1])
-            depth = max(1, min(depth, 10))  # Limit between 1 and 10
-            query_parts = args[:-1]
-
-        if not query_parts:
-            self.console.print(
-                "[red]Please provide a search query: /find your query[/red]"
-            )
-            return
-
-        query = " ".join(query_parts)
-
-        with Progress(
-            SpinnerColumn(),
-            TextColumn("[progress.description]{task.description}"),
-            console=self.console,
-            transient=True,
-        ) as progress:
-            # Step 1: Search
-            progress.add_task(f"Searching for: {query}", total=None)
-
-            try:
-                # Perform search
-                results = await search_web(query, max_results=depth)
-
-                if not results:
-                    self.console.print(
-                        Panel(
-                            f"[yellow]No results found for query: {query}[/yellow]\n\n"
-                            "Try a different search query or check your internet connection.",
-                            title="[yellow]No Results[/yellow]",
-                            border_style="yellow",
-                        )
-                    )
-                    return
-
-                # Store results in app state
-                self.app_state.add_search_results(results)
-                self.app_state.current_search_query = query
-
-                # Display search results
-                self.console.print(render_search_results(results))
-                self.console.print()
-
-                # Step 2: Analyze each result
-                successful_analyses = []
-                failed_analyses = []
-
-                for i, result in enumerate(results, 1):
-                    # Analyzing result {i}/{len(results)}: {result.title[:50]}...
-
-                    try:
-                        # Fetch web content
-                        content_data = await fetch_page_content(str(result.url))
-
-                        # Analyze content with AI
-                        ai_response = await self.ai_manager.analyze_web_content(
-                            content_data["content"], str(result.url)
-                        )
-
-                        if ai_response.success and ai_response.content:
-                            # Store in app state
-                            self.app_state.add_web_card(ai_response.content)
-                            successful_analyses.append((i, result, ai_response.content))
-                        else:
-                            failed_analyses.append(
-                                (
-                                    i,
-                                    result,
-                                    ai_response.error_message or "Unknown error",
-                                )
-                            )
-
-                    except Exception as e:
-                        failed_analyses.append((i, result, str(e)))
-
-                # Display results
-                # Complete! Displaying results...
-                await asyncio.sleep(0.5)  # Brief pause for user to see completion
-
-                # Show successful analyses
-                if successful_analyses:
-                    self.console.print(
-                        Panel(
-                            f"[green]Successfully analyzed {len(successful_analyses)} out of {len(results)} results![/green]",
-                            title="[green]Analysis Complete[/green]",
-                            border_style="green",
-                        )
-                    )
-
-                    for i, result, web_card in successful_analyses:
-                        self.console.print(
-                            f"\n[bold cyan]Result #{i}: {result.title}[/bold cyan]"
-                        )
-                        self.console.print(render_webcard(web_card))
-
-                # Show failed analyses
-                if failed_analyses:
-                    self.console.print(
-                        Panel(
-                            "\n".join(
-                                [
-                                    f"[red]#{i}: {result.title[:50]}... - {error[:100]}...[/red]"
-                                    for i, result, error in failed_analyses
-                                ]
-                            ),
-                            title="[red]Failed Analyses[/red]",
-                            border_style="red",
-                        )
-                    )
-
-                # Summary
-                self.console.print(
-                    Panel(
-                        f"[bold]Query:[/bold] {query}\n"
-                        f"[bold]Depth:[/bold] {depth} results\n"
-                        f"[bold]Successful:[/bold] {len(successful_analyses)}\n"
-                        f"[bold]Failed:[/bold] {len(failed_analyses)}",
-                        title="[blue]Find Summary[/blue]",
-                        border_style="blue",
-                    )
-                )
-
-            except SearchError as e:
-                self.console.print(f"[red]Search error: {e}[/red]")
-            except Exception as e:
-                self.console.print(f"[red]Unexpected error during find: {e}[/red]")
+                self.console.print(render_error_panel(str(e), "RMS Error"))
 
         self.console.print()
 
     async def cmd_clear(self) -> None:
         """Clear the terminal screen."""
         clear_screen()
-        self.console.print(render_welcome(self.app_state.api_key_set))
-        self.console.print()
-
-    async def cmd_status(self) -> None:
-        """Show current configuration status."""
-        from .config import get_config_manager
-
-        try:
-            config_manager = get_config_manager()
-            config = config_manager.get_config()
-
-            status_info = []
-            status_info.append("[bold blue]SelfLayer Configuration Status[/bold blue]")
-            status_info.append("")
-
-            # API Key status
-            if config.has_api_key():
-                api_key_masked = (
-                    config.gemini_api_key[:8] + "..." + config.gemini_api_key[-4:]
-                    if config.gemini_api_key
-                    else "None"
-                )
-                status_info.append(
-                    f"[bold]API Key:[/bold] [green]✓ Configured[/green] ({api_key_masked})"
-                )
-                status_info.append(
-                    f"[bold]AI Services:[/bold] {'[green]✓ Ready[/green]' if self.ai_manager.is_ready else '[yellow]⚠ Not Initialized[/yellow]'}"
-                )
-            else:
-                status_info.append("[bold]API Key:[/bold] [red]✗ Not Set[/red]")
-                status_info.append(
-                    "[bold]AI Services:[/bold] [red]✗ Not Available[/red]"
-                )
-
-            status_info.append("")
-            status_info.append(
-                f"[bold]Config File:[/bold] {config_manager.get_config_file_path()}"
+        self.console.print(
+            render_welcome(
+                has_api_key=bool(self.client), profile=self.app_state.user_profile
             )
-            status_info.append(
-                f"[bold]Session Duration:[/bold] {self.app_state.get_session_duration()}"
-            )
-            status_info.append(
-                f"[bold]Search Results:[/bold] {len(self.app_state.search_results)} cached"
-            )
-            status_info.append(
-                f"[bold]Web Cards:[/bold] {len(self.app_state.active_cards)} cached"
-            )
-
-            status_panel = Panel(
-                "\n".join(status_info),
-                title="[bold blue]Status[/bold blue]",
-                border_style="blue",
-                padding=(1, 2),
-            )
-
-            self.console.print(status_panel)
-
-        except Exception as e:
-            self.console.print(f"[red]Error retrieving status: {e}[/red]")
-
+        )
         self.console.print()
 
     async def cmd_quit(self) -> None:
         """Exit the application."""
         self.console.print("[yellow]👋 Thanks for using SelfLayer![/yellow]")
+        if self.client:
+            await self.client.close()
         self.running = False
 
 
 async def main() -> None:
     """Main entry point for the CLI application."""
-    cli = CLI()
+    cli = SelfLayerCLI()
     await cli.run()
 
 

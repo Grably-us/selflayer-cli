@@ -1,7 +1,7 @@
 [project]
 name = "selflayer"
-version = "0.2.0"
-description = "SelfLayer - AI-powered terminal web browser for content analysis and research"
+version = "2.0.0"
+description = "SelfLayer TUI - AI-powered terminal interface for knowledge management"
 readme = "README.md"
 requires-python = ">=3.11"
 authors = [
@@ -10,7 +10,7 @@ authors = [
 maintainers = [
     {name = "Anton Vice", email = "anton@selflayer.com"}
 ]
-keywords = ["web", "browser", "ai", "research", "analysis", "terminal", "cli"]
+keywords = ["ai", "knowledge", "management", "terminal", "cli", "tui", "notes", "documents"]
 classifiers = [
     "Development Status :: 4 - Beta",
     "Intended Audience :: Developers",
@@ -20,17 +20,14 @@ classifiers = [
     "Programming Language :: Python :: 3",
     "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
-    "Topic :: Internet :: WWW/HTTP :: Browsers",
+    "Topic :: Office/Business :: Scheduling",
     "Topic :: Scientific/Engineering :: Artificial Intelligence",
-    "Topic :: Text Processing :: Linguistic",
+    "Topic :: Text Processing :: Indexing",
+    "Topic :: Utilities",
 ]
 dependencies = [
-    "beautifulsoup4>=4.12.0",
-    "ddgs>=6.0.0",
-    "google-generativeai>=0.7.0",
     "httpx>=0.25.0",
     "pydantic>=2.5.0",
-    "pydantic-ai>=0.0.13",
     "python-dotenv>=1.0.0",
     "rich>=13.7.0",
 ]

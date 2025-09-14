@@ -1,23 +1,24 @@
 """
-SelfLayer - AI-Powered Terminal Web Browser for Content Analysis and Research.
+SelfLayer TUI - AI-Powered Terminal User Interface for Knowledge Management.
 
-A modern, intelligent terminal-based web browser that combines web scraping,
-AI-powered content analysis, and beautiful terminal formatting to provide
-an efficient research and content exploration experience.
+A modern, intelligent terminal interface that connects to the SelfLayer API
+for comprehensive knowledge management, document processing, note-taking,
+and AI-powered search and analysis.
 
 Key Components:
-- models: Pydantic data models for structured content
-- ai: Pydantic AI integration with Google Gemini
-- web: Async web scraping and content extraction
-- search: DuckDuckGo web search functionality
-- tui: Rich-powered terminal interface
+- models: Pydantic data models for SelfLayer API responses
+- client: SelfLayer API client with comprehensive error handling
+- renderers: Rich-powered beautiful card and table renderers
+- tui: Main terminal interface with all commands
 """
 
 from __future__ import annotations
 
-__version__ = "0.2.0"
+__version__ = "2.0.0"
 __author__ = "Anton Vice <anton@selflayer.com>"
-__description__ = "AI-powered terminal web browser for content analysis and research"
+__description__ = (
+    "AI-powered terminal user interface for SelfLayer knowledge management"
+)
 
 
 # Core exceptions

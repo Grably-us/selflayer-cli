@@ -1,30 +1,22 @@
 # Core TUI and Rich formatting
-textual>=0.41.0
 rich>=13.7.0
 
-# Pydantic AI for structured outputs and streaming
-pydantic-ai>=0.0.13
+# Pydantic for data models
 pydantic>=2.5.0
 
-# HTTP client and web scraping
+# HTTP client for SelfLayer API
 httpx>=0.25.0
-beautifulsoup4>=4.12.0
 
-# Search functionality
-duckduckgo-search>=3.9.0
+# Environment configuration
+python-dotenv>=1.0.0
 
-# Google Gemini AI
-google-generativeai>=0.7.0
+# Graph visualization (optional)
+networkx>=3.0
+matplotlib>=3.5.0
 
-# Development dependencies
+# Development dependencies (optional)
 pytest>=7.4.0
 pytest-asyncio>=0.21.0
 pytest-cov>=4.1.0
 mypy>=1.6.0
 ruff>=0.1.0
-
-# Testing TUI applications - Textual has built-in testing support
-# No additional packages needed for textual testing
-
-# Environment configuration (optional)
-python-dotenv>=1.0.0

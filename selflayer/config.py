@@ -1,4 +1,4 @@
-"""Configuration management for SelfLayer.
+"""Configuration management for SelfLayer TUI.
 
 This module handles persistent storage of configuration data like API keys,
 user preferences, and application settings. Data is stored in a secure
@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import json
 import logging
+import os
 from pathlib import Path
 from typing import Optional
 
@@ -24,46 +25,59 @@ CONFIG_FILE = CONFIG_DIR / "config.json"
 
 class SelfLayerConfig(BaseModel):
     """
-    Configuration model for SelfLayer application.
+    Configuration model for SelfLayer TUI application.
 
     Stores persistent configuration data including API keys and user preferences.
     """
 
-    gemini_api_key: Optional[str] = Field(
-        default=None, description="Google Gemini API key for AI analysis"
+    api_key: Optional[str] = Field(
+        default=None, description="SelfLayer API key for API access"
     )
-    default_max_results: int = Field(
-        default=10,
-        ge=1,
-        le=50,
-        description="Default maximum number of search results to fetch",
-    )
-    analysis_timeout: float = Field(
-        default=30.0,
-        ge=5.0,
-        le=120.0,
-        description="Default timeout for AI analysis in seconds",
-    )
-    auto_clear_on_startup: bool = Field(
-        default=True, description="Whether to clear screen on application startup"
+    base_url: str = Field(
+        default="https://api.selflayer.com/api/v1",
+        description="Base URL for SelfLayer API",
     )
     log_level: str = Field(
         default="INFO", description="Logging level for the application"
     )
+    created_at: Optional[str] = Field(
+        default=None, description="Configuration creation timestamp"
+    )
+    updated_at: Optional[str] = Field(
+        default=None, description="Configuration last update timestamp"
+    )
 
     def has_api_key(self) -> bool:
         """Check if a valid API key is configured."""
-        return self.gemini_api_key is not None and len(self.gemini_api_key.strip()) > 0
+        return self.api_key is not None and len(self.api_key.strip()) > 0
 
     def set_api_key(self, api_key: str) -> None:
         """Set the API key after validation."""
         if not api_key or not api_key.strip():
             raise ValueError("API key cannot be empty")
-        self.gemini_api_key = api_key.strip()
+
+        # Validate API key format (SelfLayer keys start with sl_live_ or sl_test_)
+        api_key = api_key.strip()
+        if not (api_key.startswith("sl_live_") or api_key.startswith("sl_test_")):
+            raise ValueError(
+                "Invalid API key format. SelfLayer API keys must start with 'sl_live_' or 'sl_test_'"
+            )
+
+        self.api_key = api_key
 
     def clear_api_key(self) -> None:
         """Clear the stored API key."""
-        self.gemini_api_key = None
+        self.api_key = None
+
+    def get_masked_api_key(self) -> str:
+        """Get a masked version of the API key for display."""
+        if not self.api_key:
+            return "Not set"
+
+        if len(self.api_key) < 12:
+            return "***"
+
+        return f"{self.api_key[:8]}...{self.api_key[-4:]}"
 
 
 class ConfigManager:
@@ -102,14 +116,29 @@ class ConfigManager:
             if CONFIG_FILE.exists():
                 with open(CONFIG_FILE, "r", encoding="utf-8") as f:
                     config_data = json.load(f)
+
+                # Handle legacy format or missing fields
+                if "created_at" not in config_data:
+                    from datetime import datetime
+
+                    config_data["created_at"] = datetime.utcnow().isoformat()
+
+                # Handle legacy gemini_api_key field
+                if "gemini_api_key" in config_data and "api_key" not in config_data:
+                    config_data["api_key"] = config_data.pop("gemini_api_key")
+
                 self._config = SelfLayerConfig(**config_data)
                 logger.info("Configuration loaded successfully")
             else:
-                self._config = SelfLayerConfig()
+                from datetime import datetime
+
+                self._config = SelfLayerConfig(created_at=datetime.utcnow().isoformat())
                 logger.info("No existing config found, using defaults")
         except Exception as e:
             logger.warning(f"Failed to load config: {e}, using defaults")
-            self._config = SelfLayerConfig()
+            from datetime import datetime
+
+            self._config = SelfLayerConfig(created_at=datetime.utcnow().isoformat())
 
         return self._config
 
@@ -133,6 +162,11 @@ class ConfigManager:
         try:
             # Ensure directory exists
             self._ensure_config_dir()
+
+            # Update timestamp
+            from datetime import datetime
+
+            self._config.updated_at = datetime.utcnow().isoformat()
 
             # Write config file with secure permissions
             config_data = self._config.model_dump(exclude_none=False)
@@ -192,7 +226,7 @@ class ConfigManager:
     def get_api_key(self) -> Optional[str]:
         """Get the stored API key."""
         config = self.get_config()
-        return config.gemini_api_key
+        return config.api_key
 
     def has_api_key(self) -> bool:
         """Check if a valid API key is configured."""
@@ -211,11 +245,44 @@ class ConfigManager:
             True if reset and save were successful, False otherwise
         """
         try:
-            self._config = SelfLayerConfig()
+            from datetime import datetime
+
+            self._config = SelfLayerConfig(created_at=datetime.utcnow().isoformat())
             return self.save_config()
         except Exception as e:
             logger.error(f"Failed to reset config: {e}")
             return False
+
+    def get_effective_api_key(self) -> Optional[str]:
+        """
+        Get the effective API key from config or environment.
+
+        Prioritizes environment variable over stored config.
+
+        Returns:
+            API key string or None if not found
+        """
+        # Check environment first
+        env_key = os.getenv("SELFLAYER_API_KEY")
+        if env_key:
+            return env_key.strip()
+
+        # Fall back to stored config
+        return self.get_api_key()
+
+    def get_effective_base_url(self) -> str:
+        """
+        Get the effective base URL from config or environment.
+
+        Returns:
+            Base URL string
+        """
+        env_url = os.getenv("SELFLAYER_BASE_URL")
+        if env_url:
+            return env_url.strip()
+
+        config = self.get_config()
+        return config.base_url
 
 
 # Global configuration manager instance
@@ -245,6 +312,11 @@ def load_api_key() -> Optional[str]:
     return get_config_manager().get_api_key()
 
 
+def get_effective_api_key() -> Optional[str]:
+    """Get the effective API key (env var takes precedence over config)."""
+    return get_config_manager().get_effective_api_key()
+
+
 def has_stored_api_key() -> bool:
     """Check if there's a valid API key in storage."""
     return get_config_manager().has_api_key()
@@ -258,5 +330,6 @@ __all__ = [
     "get_config",
     "save_api_key",
     "load_api_key",
+    "get_effective_api_key",
     "has_stored_api_key",
 ]

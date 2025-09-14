@@ -1,3 +1,389 @@
+# SelfLayer TUI v2.0
+
+> **AI-Powered Terminal User Interface for Knowledge Management**
+
+A beautiful, modern terminal interface that connects to the SelfLayer API for comprehensive knowledge management, document processing, note-taking, and AI-powered search and analysis.
+
+![SelfLayer TUI](https://via.placeholder.com/800x400/1a1a1a/00ff00?text=SelfLayer+TUI+v2.0)
+
+## ✨ Features
+
+### 🤖 AI Assistant
+- **Streaming conversations** with real-time response display
+- **Contextual answers** from your personal knowledge base
+- **Follow-up suggestions** and proposed actions
+- Natural language queries about your data
+
+### 🔍 Intelligent Search
+- **Multi-source search** across documents, notes, and knowledge graph
+- **Entity extraction** and relationship mapping
+- **Document summaries** with relevant snippets
+- **Source attribution** for all results
+
+### 📄 Document Management
+- **Upload and process** any document type
+- **Automatic summarization** and content extraction
+- **Status tracking** for processing pipeline
+- **Rich metadata** display with file details
+
+### 📝 Note Taking
+- **Quick note creation** with title and content
+- **Edit and update** existing notes
+- **Tag organization** and categorization
+- **Rich text preview** in terminal cards
+
+### 🔗 Integrations
+- **Connect external services** (Gmail, Google Calendar, Drive, etc.)
+- **OAuth flow management** with redirect handling
+- **Connection status monitoring**
+- **Easy disconnect** with confirmation
+
+### 📢 Notifications
+- **Real-time updates** on processing, integrations, etc.
+- **Unread count tracking**
+- **Batch operations** (mark all as read)
+- **Type-based filtering** and display
+
+## 🚀 Quick Start
+
+### Installation
+
+```bash
+# Clone the repository
+git clone https://github.com/antonvice/SelfTUI
+cd SelfTUI
+
+# Create virtual environment
+python -m venv venv
+source venv/bin/activate  # On Windows: venv\Scripts\activate
+
+# Install dependencies
+pip install -r requirements.txt
+
+# Install in development mode
+pip install -e .
+```
+
+### Configuration
+
+1. **Set up your environment variables:**
+
+```bash
+# Copy the example environment file
+cp .env.example .env
+
+# Edit .env and add your SelfLayer API key
+export SELFLAYER_API_KEY=sl_live_your_api_key_here
+```
+
+2. **Get your SelfLayer API key:**
+   - Visit your SelfLayer dashboard
+   - Go to API Settings
+   - Generate a new API key
+   - Copy the key (starts with `sl_live_`)
+
+### Running the TUI
+
+```bash
+# Run directly
+python -m selflayer
+
+# Or if installed
+selflayer
+```
+
+## 📖 Usage Guide
+
+### 🎯 Command Overview
+
+| Command | Shortcut | Description |
+|---------|----------|-------------|
+| `/ask <question>` | `/a` | Chat with AI assistant |
+| `/search <query>` | `/s` | Search knowledge base |
+| `/documents` | `/d` | Manage documents |
+| `/notes` | `/n` | Manage notes |
+| `/integrations` | `/i` | Manage connections |
+| `/notifications` | | View notifications |
+| `/rms` | `/r` | Random memory surfacing |
+| `/help` | `/h` | Show help |
+| `/clear` | `/c` | Clear screen |
+| `/quit` | `/q` | Exit application |
+
+### 🤖 AI Assistant
+
+```bash
+# Ask questions about your data
+/ask What are my recent project notes?
+/ask Summarize today's important emails
+/ask What documents mention machine learning?
+
+# The AI will provide contextual answers with:
+# - Streaming real-time responses
+# - Suggested follow-up questions
+# - Proposed actions
+```
+
+### 🔍 Search
+
+```bash
+# Search across all your data
+/search machine learning projects
+/search meeting notes from last week
+/search documents about API integration
+
+# Results include:
+# - Knowledge graph entities
+# - Document summaries
+# - Source chunks with context
+```
+
+### 📄 Document Management
+
+```bash
+# List all documents
+/documents
+/d
+
+# Upload new document
+/d new /path/to/document.pdf
+/d new ~/Documents/report.docx
+
+# View document details
+/d 1  # View document #1
+/d 2  # View document #2
+
+# Delete document (with confirmation)
+/d delete 1
+```
+
+### 📝 Note Management
+
+```bash
+# List all notes
+/notes
+/n
+
+# Create new note
+/n new "Meeting Notes" "Discussed project timeline and deliverables"
+/n new "Ideas" "Revolutionary AI-powered terminal interface"
+
+# View note details
+/n 1  # View note #1
+
+# Edit note content
+/n edit 1 "Updated content here"
+
+# Delete note (with confirmation)
+/n delete 1
+```
+
+### 🔗 Integration Management
+
+```bash
+# List all integrations
+/integrations
+/i
+
+# Connect new integration
+/i connect gmail
+/i connect google_calendar
+/i connect google_drive
+
+# Disconnect integration
+/i disconnect 1  # Disconnect integration #1
+```
+
+### 📢 Notifications
+
+```bash
+# View all notifications
+/notifications
+
+# Mark specific notification as read
+/notifications read 1
+
+# Mark all notifications as read
+/notifications clear
+```
+
+## 🎨 Beautiful Terminal UI
+
+### Rich Cards and Tables
+- **Profile cards** with user information and usage stats
+- **Document tables** with status, size, and processing info
+- **Note cards** with previews and tag information
+- **Search results** with categorized sections
+- **Integration tables** with provider status
+- **Notification lists** with read/unread states
+
+### Color-Coded Status
+- 🟢 **Green**: Success, completed, connected
+- 🟡 **Yellow**: Processing, pending, warnings
+- 🔴 **Red**: Errors, failed, disconnected
+- 🔵 **Blue**: Information, details
+- 🟣 **Purple**: Headers, titles
+
+### Interactive Elements
+- **Progress bars** for uploads and processing
+- **Streaming text** for AI responses
+- **Confirmation dialogs** for destructive actions
+- **Rich formatting** with emojis and styling
+
+## 🛠️ Development
+
+### Project Structure
+
+```
+SelfTUI/
+├── selflayer/           # Main package
+│   ├── __init__.py     # Package initialization
+│   ├── client.py       # SelfLayer API client
+│   ├── models.py       # Pydantic data models
+│   ├── renderers.py    # Rich rendering functions
+│   ├── tui.py          # Main TUI application
+│   └── styles.css      # TUI styling (if needed)
+├── tests/              # Test suite
+├── requirements.txt    # Dependencies
+├── pyproject.toml     # Project configuration
+├── .env.example       # Environment template
+└── README.md          # This file
+```
+
+### Key Components
+
+1. **API Client** (`client.py`): Comprehensive async HTTP client with error handling, streaming support, and all SelfLayer endpoints
+2. **Models** (`models.py`): Pydantic models for all API responses with display helpers
+3. **Renderers** (`renderers.py`): Beautiful Rich formatting for all data types
+4. **TUI** (`tui.py`): Main terminal interface with command routing and state management
+
+### Running Tests
+
+```bash
+# Run all tests
+pytest
+
+# Run with coverage
+pytest --cov=selflayer --cov-report=html
+
+# Run specific test file
+pytest tests/test_client.py -v
+
+# Run tests with output
+pytest -s
+```
+
+### Development Setup
+
+```bash
+# Install development dependencies
+pip install -r requirements.txt
+
+# Install in development mode
+pip install -e .
+
+# Run linting
+ruff check selflayer/
+
+# Run formatting
+ruff format selflayer/
+
+# Type checking
+mypy selflayer/
+```
+
+## 🔧 Configuration
+
+### Environment Variables
+
+| Variable | Required | Description | Default |
+|----------|----------|-------------|---------||
+| `SELFLAYER_API_KEY` | ✅ Yes | Your SelfLayer API key | None |
+| `SELFLAYER_BASE_URL` | ❌ No | API base URL | `https://api.selflayer.com/api/v1` |
+| `SELFLAYER_LOG_LEVEL` | ❌ No | Logging level | `INFO` |
+
+### API Key Format
+
+SelfLayer API keys follow the format: `sl_live_` followed by 64 random characters.
+
+Example: `sl_live_1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef`
+
+## 🚨 Troubleshooting
+
+### Common Issues
+
+**API Key Not Found**
+```bash
+# Error: SelfLayer API key required
+export SELFLAYER_API_KEY=your_key_here
+# or add to .env file
+```
+
+**Connection Errors**
+```bash
+# Check your internet connection
+ping api.selflayer.com
+
+# Verify API key is valid
+curl -H "Authorization: Bearer $SELFLAYER_API_KEY" https://api.selflayer.com/api/v1/profile
+```
+
+**Permission Errors**
+```bash
+# Your API key might not have sufficient permissions
+# Check your SelfLayer dashboard for API key settings
+```
+
+### Debugging
+
+Enable debug logging:
+```bash
+export SELFLAYER_LOG_LEVEL=DEBUG
+```
+
+View logs:
+```bash
+# Logs are written to ~/.selflayer/logs/selflayer_tui.log
+tail -f ~/.selflayer/logs/selflayer_tui.log
+```
+
+## 🤝 Contributing
+
+1. Fork the repository
+2. Create a feature branch (`git checkout -b feature/amazing-feature`)
+3. Commit your changes (`git commit -m 'Add amazing feature'`)
+4. Push to the branch (`git push origin feature/amazing-feature`)
+5. Open a Pull Request
+
+### Development Guidelines
+
+- **Type Annotations**: All functions must have complete type annotations
+- **Documentation**: All public functions require comprehensive docstrings
+- **Testing**: Write tests for all new functionality
+- **Formatting**: Use `ruff format` for code formatting
+- **Linting**: Use `ruff check` for linting
+
+## 📄 License
+
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+
+## 🆘 Support
+
+- **Documentation**: Check the [SelfLayer API Guide](v07/SELFLAYER_TUI_API_GUIDE.md)
+- **Issues**: Open an issue on GitHub
+- **Email**: Contact anton@selflayer.com
+- **Discord**: Join our community server
+
+## 🎉 Acknowledgments
+
+- **Rich**: For beautiful terminal formatting
+- **httpx**: For modern async HTTP client
+- **Pydantic**: For robust data validation
+- **SelfLayer Team**: For the amazing API
+
+---
+
+**Made with ❤️ by the SelfLayer team**
+
 # SelfLayer 🔍🧠
 
 **AI-Powered Terminal Web Browser for Content Analysis and Research**
