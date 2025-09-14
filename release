@@ -52,11 +52,15 @@ def set_version(new_version: str) -> None:
     init_file.write_text(content)
     print(f"✅ Updated __init__.py to version {new_version}")
 
-    # Update pyproject.toml
+    # Update pyproject.toml (only the [project] version field)
     toml_file = Path("pyproject.toml")
     content = toml_file.read_text()
+    # Only update the version in the [project] section
     content = re.sub(
-        r'version = ["\']([^"\']+)["\']', f'version = "{new_version}"', content
+        r'(\[project\][\s\S]*?\n)version = ["\']([^"\']+)["\']',
+        rf'\1version = "{new_version}"',
+        content,
+        count=1,
     )
     toml_file.write_text(content)
     print(f"✅ Updated pyproject.toml to version {new_version}")
