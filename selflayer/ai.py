@@ -378,7 +378,7 @@ class AIManager:
         self._analyzer: ContentAnalyzer | None = None
         self._is_initialized = False
 
-    async def initialize(self) -> bool:
+    def initialize(self) -> bool:
         """
         Initialize AI services.
 
@@ -474,7 +474,7 @@ async def quick_analyze(content: str, url: str, **kwargs: Any) -> AIResponse:
     """
     manager = get_ai_manager()
     if not manager.is_ready:
-        await manager.initialize()
+        manager.initialize()
 
     return await manager.analyze_web_content(content, url, **kwargs)
 

@@ -303,10 +303,17 @@ class CLI:
                 # Initialize AI manager with stored key
                 self.ai_manager = get_ai_manager()
                 self.ai_manager.api_key = api_key
-                # Note: We don't call initialize() here to avoid blocking startup
-                # It will be initialized when first needed
-                self.app_state.api_key_set = True
-                logger.info("Loaded stored API key successfully")
+                # Initialize the AI manager so it's ready for use
+                initialization_success = self.ai_manager.initialize()
+                if initialization_success:
+                    self.app_state.api_key_set = True
+                    logger.info(
+                        "Loaded stored API key and initialized AI manager successfully"
+                    )
+                else:
+                    logger.warning(
+                        "API key loaded but AI manager initialization failed"
+                    )
         except Exception as e:
             logger.warning(f"Failed to load stored config: {e}")
 
